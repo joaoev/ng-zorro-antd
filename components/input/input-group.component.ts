@@ -13,7 +13,6 @@ import {
   Component,
   ContentChildren,
   DestroyRef,
-  Directive,
   ElementRef,
   Input,
   OnChanges,
@@ -39,16 +38,6 @@ import { NzInputGroupSlotComponent } from './input-group-slot.component';
 import { NzInputDirective } from './input.directive';
 
 /**
- * @deprecated Will be removed in v22.0.0. This component will be removed along with input-group.
- */
-@Directive({
-  selector: `nz-input-group[nzSuffix], nz-input-group[nzPrefix]`
-})
-export class NzInputGroupWhitSuffixOrPrefixDirective {
-  public readonly elementRef = inject(ElementRef);
-}
-
-/**
  * @deprecated Will be removed in v22. It is recommended to use `<nz-input-wrapper>` instead.
  */
 @Component({
@@ -57,64 +46,7 @@ export class NzInputGroupWhitSuffixOrPrefixDirective {
   imports: [NzInputGroupSlotComponent, NgTemplateOutlet, NzFormItemFeedbackIconComponent],
   encapsulation: ViewEncapsulation.None,
   providers: [NzFormNoStatusService, { provide: NZ_SPACE_COMPACT_ITEM_TYPE, useValue: 'input' }],
-  template: `
-    @if (isAddOn) {
-      <span class="ant-input-wrapper ant-input-group">
-        @if (nzAddOnBefore || nzAddOnBeforeIcon) {
-          <span nz-input-group-slot type="addon" [icon]="nzAddOnBeforeIcon" [template]="nzAddOnBefore"></span>
-        }
-
-        @if (isAffix || hasFeedback) {
-          <span
-            class="ant-input-affix-wrapper"
-            [class.ant-input-affix-wrapper-disabled]="disabled"
-            [class.ant-input-affix-wrapper-sm]="isSmall"
-            [class.ant-input-affix-wrapper-lg]="isLarge"
-            [class.ant-input-affix-wrapper-focused]="focused"
-            [class]="affixInGroupStatusCls"
-          >
-            <ng-template [ngTemplateOutlet]="affixTemplate"></ng-template>
-          </span>
-        } @else {
-          <ng-template [ngTemplateOutlet]="contentTemplate" />
-        }
-        @if (nzAddOnAfter || nzAddOnAfterIcon) {
-          <span nz-input-group-slot type="addon" [icon]="nzAddOnAfterIcon" [template]="nzAddOnAfter"></span>
-        }
-      </span>
-    } @else {
-      @if (isAffix) {
-        <ng-template [ngTemplateOutlet]="affixTemplate" />
-      } @else {
-        <ng-template [ngTemplateOutlet]="contentTemplate" />
-      }
-    }
-
-    <!-- affix template -->
-    <ng-template #affixTemplate>
-      @if (nzPrefix || nzPrefixIcon) {
-        <span nz-input-group-slot type="prefix" [icon]="nzPrefixIcon" [template]="nzPrefix"></span>
-      }
-      <ng-template [ngTemplateOutlet]="contentTemplate" />
-      @if (nzSuffix || nzSuffixIcon || isFeedback) {
-        <span nz-input-group-slot type="suffix" [icon]="nzSuffixIcon" [template]="nzSuffix">
-          @if (isFeedback) {
-            <nz-form-item-feedback-icon [status]="status" />
-          }
-        </span>
-      }
-    </ng-template>
-
-    <!-- content template -->
-    <ng-template #contentTemplate>
-      <ng-content></ng-content>
-      @if (!isAddOn && !isAffix && isFeedback) {
-        <span nz-input-group-slot type="suffix">
-          <nz-form-item-feedback-icon [status]="status" />
-        </span>
-      }
-    </ng-template>
-  `,
+  templateUrl: './input-group.component.html',
   host: {
     '[class.ant-input-search-enter-button]': `nzSearch`,
     '[class.ant-input-search]': `nzSearch`,
