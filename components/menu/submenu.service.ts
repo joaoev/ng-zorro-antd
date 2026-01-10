@@ -3,16 +3,34 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { ConnectedOverlayPositionChange, ConnectionPositionPair } from '@angular/cdk/overlay';
 import { Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable, Subject, combineLatest, merge } from 'rxjs';
 import { auditTime, distinctUntilChanged, filter, map, mergeMap } from 'rxjs/operators';
 
+import { getPlacementName, POSITION_MAP, POSITION_TYPE_HORIZONTAL } from 'ng-zorro-antd/core/overlay';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 
 import { MenuService } from './menu.service';
 import { NzIsMenuInsideDropdownToken } from './menu.token';
 import { NzMenuModeType } from './menu.types';
+
+export const SUBMENU_VERTICAL_POSITIONS = [
+  POSITION_MAP.rightTop,
+  POSITION_MAP.right,
+  POSITION_MAP.rightBottom,
+  POSITION_MAP.leftTop,
+  POSITION_MAP.left,
+  POSITION_MAP.leftBottom
+];
+
+export const SUBMENU_HORIZONTAL_POSITIONS = [
+  POSITION_MAP.bottomLeft,
+  POSITION_MAP.bottomRight,
+  POSITION_MAP.topRight,
+  POSITION_MAP.topLeft
+];
 
 @Injectable()
 export class NzSubmenuService {
@@ -49,6 +67,25 @@ export class NzSubmenuService {
   }
   setMouseEnterTitleOrOverlayState(value: boolean): void {
     this.isMouseEnterTitleOrOverlay$.next(value);
+  }
+
+  getOverlayPositions(mode: NzMenuModeType, placement: POSITION_TYPE_HORIZONTAL): ConnectionPositionPair[] {
+    if (mode === 'horizontal') {
+      return [POSITION_MAP[placement], ...SUBMENU_HORIZONTAL_POSITIONS];
+    } else if (mode === 'vertical') {
+      return SUBMENU_VERTICAL_POSITIONS;
+    }
+    return SUBMENU_VERTICAL_POSITIONS;
+  }
+
+  getPositionFromChange(position: ConnectedOverlayPositionChange): 'left' | 'right' {
+    const placement = getPlacementName(position);
+    if (placement === 'rightTop' || placement === 'rightBottom' || placement === 'right') {
+      return 'right';
+    } else if (placement === 'leftTop' || placement === 'leftBottom' || placement === 'left') {
+      return 'left';
+    }
+    return 'right';
   }
 
   constructor() {
