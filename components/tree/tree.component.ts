@@ -20,7 +20,6 @@ import {
   SimpleChanges,
   TemplateRef,
   ViewChild,
-  booleanAttribute,
   forwardRef,
   inject,
   DestroyRef
@@ -30,7 +29,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Observable } from 'rxjs';
 
 import { treeCollapseMotion, NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
-import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/config';
+import { NzConfigKey, NzConfigService } from 'ng-zorro-antd/core/config';
 import {
   NzFormatBeforeDropEvent,
   NzFormatEmitEvent,
@@ -44,9 +43,16 @@ import {
 } from 'ng-zorro-antd/core/tree';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 
-import { TreeBehaviorOptions, TreeDataOptions, TreeDisplayOptions, TreeStateOptions, TreeTemplateOptions, TreeVirtualScrollOptions } from './tree.types';
 import { NzTreeNodeBuiltinComponent } from './tree-node.component';
 import { NzTreeService } from './tree.service';
+import {
+  TreeBehaviorOptions,
+  TreeDataOptions,
+  TreeDisplayOptions,
+  TreeStateOptions,
+  TreeTemplateOptions,
+  TreeVirtualScrollOptions
+} from './tree.types';
 
 export function NzTreeServiceFactory(): NzTreeBaseService {
   const higherOrderService = inject(NzTreeHigherOrderServiceToken, { skipSelf: true, optional: true });
@@ -204,21 +210,30 @@ export class NzTreeComponent extends NzTreeBase implements OnInit, ControlValueA
     if (this.nzDisplayOptions.showIcon !== undefined) {
       return this.nzDisplayOptions.showIcon;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzShowIcon ?? false;
+    const treeConfig = this.nzConfigService.getConfigForComponent(this._nzModuleName) as
+      | { nzShowIcon?: boolean }
+      | undefined;
+    return treeConfig?.nzShowIcon ?? false;
   }
 
   get nzHideUnMatched(): boolean {
     if (this.nzDisplayOptions.hideUnMatched !== undefined) {
       return this.nzDisplayOptions.hideUnMatched;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzHideUnMatched ?? false;
+    return (
+      (this.nzConfigService.getConfigForComponent(this._nzModuleName) as { nzHideUnMatched?: boolean } | undefined)
+        ?.nzHideUnMatched ?? false
+    );
   }
 
   get nzBlockNode(): boolean {
     if (this.nzDisplayOptions.blockNode !== undefined) {
       return this.nzDisplayOptions.blockNode;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzBlockNode ?? false;
+    const treeConfig = this.nzConfigService.getConfigForComponent(this._nzModuleName) as
+      | { nzBlockNode?: boolean }
+      | undefined;
+    return treeConfig?.nzBlockNode ?? false;
   }
 
   get nzShowExpand(): boolean {
@@ -372,11 +387,7 @@ export class NzTreeComponent extends NzTreeBase implements OnInit, ControlValueA
   renderTreeProperties(changes: SimpleChanges): void {
     let useDefaultExpandedKeys = false;
     let expandAll = false;
-    const {
-      nzDataOptions,
-      nzStateOptions,
-      nzBehaviorOptions
-    } = changes;
+    const { nzDataOptions, nzStateOptions, nzBehaviorOptions } = changes;
 
     if (nzBehaviorOptions) {
       if (nzBehaviorOptions.previousValue?.expandAll !== nzBehaviorOptions.currentValue?.expandAll) {
@@ -414,7 +425,10 @@ export class NzTreeComponent extends NzTreeBase implements OnInit, ControlValueA
         this.handleCheckedKeys(this.nzCheckedKeys);
       }
 
-      if (nzStateOptions.previousValue?.expandedKeys !== nzStateOptions.currentValue?.expandedKeys || nzBehaviorOptions) {
+      if (
+        nzStateOptions.previousValue?.expandedKeys !== nzStateOptions.currentValue?.expandedKeys ||
+        nzBehaviorOptions
+      ) {
         useDefaultExpandedKeys = true;
         this.handleExpandedKeys(expandAll || this.nzExpandedKeys);
       }
