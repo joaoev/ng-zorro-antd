@@ -18,7 +18,6 @@ import {
   forwardRef,
   inject,
   DestroyRef,
-  NgZone,
   ChangeDetectorRef
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -26,7 +25,6 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import { NzFormStatusService } from 'ng-zorro-antd/core/form';
 import { NzSafeAny, OnChangeType, OnTouchedType } from 'ng-zorro-antd/core/types';
-import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 
 import { NzRadioService } from './radio.service';
 
@@ -74,13 +72,13 @@ import { NzRadioService } from './radio.service';
     '[class.ant-radio-wrapper-disabled]': 'nzDisabled && !isRadioButton',
     '[class.ant-radio-button-wrapper-disabled]': 'nzDisabled && isRadioButton',
     '[class.ant-radio-wrapper-rtl]': `!isRadioButton && dir === 'rtl'`,
-    '[class.ant-radio-button-wrapper-rtl]': `isRadioButton && dir === 'rtl'`
+    '[class.ant-radio-button-wrapper-rtl]': `isRadioButton && dir === 'rtl'`,
+    '(click)': 'onHostClick($event)'
   }
 })
 export class NzRadioComponent implements ControlValueAccessor, AfterViewInit, OnInit {
   private readonly directionality = inject(Directionality);
   private readonly nzRadioService = inject(NzRadioService, { optional: true });
-  private readonly ngZone = inject(NgZone);
   private readonly elementRef = inject(ElementRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly focusMonitor = inject(FocusMonitor);
@@ -106,7 +104,7 @@ export class NzRadioComponent implements ControlValueAccessor, AfterViewInit, On
   }
 
   blur(): void {
-    this.inputElement!.nativeElement.blur();
+    (this.inputElement as { ['nativeElement']: HTMLInputElement })['nativeElement'].blur();
   }
 
   constructor() {
@@ -183,8 +181,6 @@ export class NzRadioComponent implements ControlValueAccessor, AfterViewInit, On
     });
 
     this.dir = this.directionality.value;
-
-    this.setupClickListener();
   }
 
   ngAfterViewInit(): void {
@@ -193,25 +189,19 @@ export class NzRadioComponent implements ControlValueAccessor, AfterViewInit, On
     }
   }
 
-  private setupClickListener(): void {
-    fromEventOutsideAngular<MouseEvent>(this.elementRef.nativeElement, 'click')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(event => {
-        /** prevent label click triggered twice. **/
-        event.stopPropagation();
-        event.preventDefault();
-        if (this.nzDisabled || this.isChecked) {
-          return;
-        }
-        this.ngZone.run(() => {
-          this.focus();
-          this.nzRadioService?.select(this.nzValue);
-          if (this.isNgModel) {
-            this.isChecked = true;
-            this.onChange(true);
-          }
-          this.cdr.markForCheck();
-        });
-      });
+  onHostClick(event: MouseEvent): void {
+    /** prevent label click triggered twice. **/
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.nzDisabled || this.isChecked) {
+      return;
+    }
+    this.focus();
+    this.nzRadioService?.select(this.nzValue);
+    if (this.isNgModel) {
+      this.isChecked = true;
+      this.onChange(true);
+    }
+    this.cdr.markForCheck();
   }
 }

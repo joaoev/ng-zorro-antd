@@ -60,11 +60,13 @@ export class NzAffixComponent implements OnChanges {
   private readonly directionality = inject(Directionality);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
-  private readonly placeholderNode: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
+  private readonly placeholderNode: HTMLElement = (
+    inject(ElementRef<HTMLElement>) as { ['nativeElement']: HTMLElement }
+  )['nativeElement'];
 
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
-  @ViewChild('fixedEl', { static: true }) private fixedEl!: ElementRef<HTMLDivElement>;
+  @ViewChild('fixedEl', { static: true }) private readonly fixedEl!: ElementRef<HTMLDivElement>;
 
   @Input() nzTarget?: string | Element | Window;
 
@@ -80,13 +82,22 @@ export class NzAffixComponent implements OnChanges {
 
   private affixStyle?: NgStyleInterface;
   private placeholderStyle?: NgStyleInterface;
+  private isAffixed = false;
   private positionChangeSubscription = Subscription.EMPTY;
   private offsetChanged$ = new ReplaySubject<void>(1);
   private timeout?: ReturnType<typeof setTimeout>;
 
+  private get fixedElement(): HTMLDivElement {
+    return (this.fixedEl as { ['nativeElement']: HTMLDivElement })['nativeElement'];
+  }
+
   private get target(): Element | Window {
     const el = this.nzTarget;
-    return (typeof el === 'string' ? this.document.querySelector(el) : el) || window;
+    const resolvedTarget = typeof el === 'string' ? this.document.querySelector(el) : el;
+
+    return (
+      (resolvedTarget as Element | Window | null) ?? (this.document.defaultView as Window | null) ?? this.document.body
+    );
   }
 
   constructor() {
@@ -118,10 +129,11 @@ export class NzAffixComponent implements OnChanges {
     }
 
     this.removeListeners();
-    const el = this.target === window ? this.document.body : (this.target as Element);
+    const target = this.target;
+    const el = target instanceof Window ? this.document.body : (target as Element);
     this.positionChangeSubscription = this.ngZone.runOutsideAngular(() =>
       merge(
-        ...Object.keys(AffixRespondEvents).map(evName => fromEvent(this.target, evName)),
+        ...Object.keys(AffixRespondEvents).map(evName => fromEvent(target, evName)),
         this.offsetChanged$.pipe(map(() => NOOP_EVENT)),
         this.nzResizeObserver.observe(el)
       )
@@ -160,7 +172,7 @@ export class NzAffixComponent implements OnChanges {
 
   private setAffixStyle(e: Event, affixStyle?: NgStyleInterface): void {
     const originalAffixStyle = this.affixStyle;
-    if (e.type === 'scroll' && originalAffixStyle && affixStyle && this.target === window) {
+    if (e.type === 'scroll' && originalAffixStyle && affixStyle && this.target instanceof Window) {
       return;
     }
     if (shallowEqual(originalAffixStyle, affixStyle)) {
@@ -168,13 +180,14 @@ export class NzAffixComponent implements OnChanges {
     }
 
     const fixed = !!affixStyle;
-    const wrapEl = this.fixedEl.nativeElement;
+    const wrapEl = this.fixedElement;
     this.renderer.setStyle(wrapEl, 'cssText', getStyleAsText(affixStyle));
+    this.isAffixed = fixed;
     this.affixStyle = affixStyle;
     if (fixed) {
-      wrapEl.classList.add(NZ_AFFIX_CLS_PREFIX);
+      this.renderer.addClass(wrapEl, NZ_AFFIX_CLS_PREFIX);
     } else {
-      wrapEl.classList.remove(NZ_AFFIX_CLS_PREFIX);
+      this.renderer.removeClass(wrapEl, NZ_AFFIX_CLS_PREFIX);
     }
     this.updateRtlClass();
     if ((affixStyle && !originalAffixStyle) || (!affixStyle && originalAffixStyle)) {
@@ -199,7 +212,7 @@ export class NzAffixComponent implements OnChanges {
     this.placeholderStyle = undefined;
     const styleObj = {
       width: this.placeholderNode.offsetWidth,
-      height: this.fixedEl.nativeElement.offsetHeight
+      height: this.fixedElement.offsetHeight
     };
     this.setAffixStyle(e, {
       ...this.affixStyle,
@@ -217,7 +230,7 @@ export class NzAffixComponent implements OnChanges {
     let offsetTop = this.nzOffsetTop;
     const scrollTop = this.scrollSrv.getScroll(targetNode, true);
     const elemOffset = this.getOffset(this.placeholderNode, targetNode!);
-    const fixedNode = this.fixedEl.nativeElement;
+    const fixedNode = this.fixedElement;
     const elemSize = {
       width: fixedNode.offsetWidth,
       height: fixedNode.offsetHeight
@@ -235,7 +248,8 @@ export class NzAffixComponent implements OnChanges {
       offsetMode.bottom = typeof this.nzOffsetBottom === 'number';
     }
     const targetRect = getTargetRect(targetNode);
-    const targetInnerHeight = (targetNode as Window).innerHeight || (targetNode as HTMLElement).clientHeight;
+    const targetInnerHeight =
+      targetNode instanceof Window ? targetNode.innerHeight : (targetNode as HTMLElement).clientHeight;
     if (scrollTop >= elemOffset.top - (offsetTop as number) && offsetMode.top) {
       const width = elemOffset.width;
       const top = targetRect.top + (offsetTop as number);
@@ -253,7 +267,8 @@ export class NzAffixComponent implements OnChanges {
       scrollTop <= elemOffset.top + elemSize.height + (this.nzOffsetBottom as number) - targetInnerHeight &&
       offsetMode.bottom
     ) {
-      const targetBottomOffset = targetNode === window ? 0 : window.innerHeight - targetRect.bottom!;
+      const viewportHeight = this.document.documentElement?.clientHeight ?? targetInnerHeight;
+      const targetBottomOffset = targetNode instanceof Window ? 0 : viewportHeight - targetRect.bottom!;
       const width = elemOffset.width;
       this.setAffixStyle(e, {
         position: 'fixed',
@@ -288,11 +303,11 @@ export class NzAffixComponent implements OnChanges {
   }
 
   private updateRtlClass(): void {
-    const wrapEl = this.fixedEl.nativeElement;
-    if (this.directionality.valueSignal() === 'rtl' && wrapEl.classList.contains(NZ_AFFIX_CLS_PREFIX)) {
-      wrapEl.classList.add(`${NZ_AFFIX_CLS_PREFIX}-rtl`);
+    const wrapEl = this.fixedElement;
+    if (this.directionality.valueSignal() === 'rtl' && this.isAffixed) {
+      this.renderer.addClass(wrapEl, `${NZ_AFFIX_CLS_PREFIX}-rtl`);
     } else {
-      wrapEl.classList.remove(`${NZ_AFFIX_CLS_PREFIX}-rtl`);
+      this.renderer.removeClass(wrapEl, `${NZ_AFFIX_CLS_PREFIX}-rtl`);
     }
   }
 }

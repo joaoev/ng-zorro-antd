@@ -47,7 +47,7 @@ const FontGap = 3;
 export class NzWatermarkComponent implements OnInit, OnChanges {
   private isServer = isPlatformServer(inject(PLATFORM_ID));
   private document = inject(DOCUMENT);
-  private el: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
+  private el: HTMLElement = (inject(ElementRef<HTMLElement>) as { ['nativeElement']: HTMLElement })['nativeElement'];
   private cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
 
   @Input({ transform: numberAttribute }) nzWidth: number = 120;

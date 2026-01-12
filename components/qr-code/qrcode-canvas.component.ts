@@ -45,6 +45,16 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
   readonly color = input<string>(DEFAULT_FRONT_COLOR);
   readonly bgColor = input<string>(DEFAULT_BACKGROUND_COLOR);
 
+  private get canvasElement(): HTMLCanvasElement | null {
+    const canvas = this.canvas();
+    return canvas ? (canvas as { ['nativeElement']: HTMLCanvasElement })['nativeElement'] : null;
+  }
+
+  private get imageElement(): HTMLImageElement | null {
+    const image = this.image();
+    return image ? (image as { ['nativeElement']: HTMLImageElement })['nativeElement'] : null;
+  }
+
   constructor() {
     effect(() => {
       this.icon();
@@ -55,7 +65,7 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
       this.size();
       this.color();
       this.bgColor();
-      if (!this.canvas()?.nativeElement) {
+      if (!this.canvasElement) {
         return;
       }
 
@@ -68,12 +78,12 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
   }
 
   private render(): void {
-    const canvas = this.canvas();
-    if (!canvas) {
+    const canvasEl = this.canvasElement;
+    if (!canvasEl) {
       return;
     }
 
-    const ctx = canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
+    const ctx = canvasEl.getContext('2d') as CanvasRenderingContext2D;
     if (!ctx) {
       return;
     }
@@ -84,14 +94,14 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
   }
 
   private setupCanvas(ctx: CanvasRenderingContext2D): void {
-    const canvas = this.canvas();
-    if (!canvas) {
+    const canvasEl = this.canvasElement;
+    if (!canvasEl) {
       return;
     }
 
     const pixelRatio = window.devicePixelRatio || 1;
-    canvas.nativeElement.height = canvas.nativeElement.width = this.size() * pixelRatio;
-    canvas.nativeElement.style.width = canvas.nativeElement.style.height = `${this.size()}px`;
+    canvasEl.height = canvasEl.width = this.size() * pixelRatio;
+    canvasEl.style.width = canvasEl.style.height = `${this.size()}px`;
 
     const scale = (this.size() / this.numCells()) * pixelRatio;
     ctx.scale(scale, scale);
@@ -142,8 +152,8 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
       return;
     }
 
-    const image = this.image();
-    if (!image) {
+    const imageEl = this.imageElement;
+    if (!imageEl) {
       return;
     }
 
@@ -157,8 +167,8 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
       this.onImageLoadError(ctx);
     };
 
-    image.nativeElement.addEventListener('load', onLoad);
-    image.nativeElement.addEventListener('error', onError);
+    imageEl.addEventListener('load', onLoad);
+    imageEl.addEventListener('error', onError);
   }
 
   private onImageLoadSuccess(ctx: CanvasRenderingContext2D): void {
@@ -166,11 +176,11 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
     this.renderQRCode(ctx, cellsToDraw);
 
     const imageSettings = this.calculatedImageSettings();
-    const image = this.image();
-    if (imageSettings && image) {
+    const imageEl = this.imageElement;
+    if (imageSettings && imageEl) {
       ctx.globalAlpha = imageSettings.opacity;
       ctx.drawImage(
-        image.nativeElement,
+        imageEl,
         imageSettings.x + this.margin(),
         imageSettings.y + this.margin(),
         imageSettings.w,
@@ -185,10 +195,10 @@ export class NzQrcodeCanvasComponent implements AfterViewInit {
   }
 
   private cleanupImageListeners(onLoad: () => void, onError: () => void): void {
-    const image = this.image();
-    if (image?.nativeElement) {
-      image.nativeElement.removeEventListener('load', onLoad);
-      image.nativeElement.removeEventListener('error', onError);
+    const imageEl = this.imageElement;
+    if (imageEl) {
+      imageEl.removeEventListener('load', onLoad);
+      imageEl.removeEventListener('error', onError);
     }
   }
 }
