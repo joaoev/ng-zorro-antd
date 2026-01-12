@@ -15,11 +15,9 @@ import {
   Output,
   SimpleChanges,
   TemplateRef,
-  Type,
   ViewContainerRef,
   booleanAttribute,
-  inject,
-  numberAttribute
+  inject
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
@@ -33,7 +31,6 @@ import { NzModalLegacyAPI } from './modal-legacy-api';
 import { NzModalRef } from './modal-ref';
 import { NzModalTitleDirective } from './modal-title.directive';
 import {
-  ModalButtonOptions,
   ModalOptions,
   ModalTypes,
   OnClickCallback,
@@ -55,6 +52,18 @@ import { getConfigFromComponent } from './utils';
 export class NzModalComponent<T extends ModalOptions = NzSafeAny, R = NzSafeAny>
   implements OnChanges, NzModalLegacyAPI<T, R>
 {
+  /**
+   * Rodapé do modal. Pode ser string ou TemplateRef.
+   */
+  nzFooter?: string | TemplateRef<{}>;
+  /**
+   * Título do modal. Pode ser string ou TemplateRef.
+   */
+  nzTitle?: string | TemplateRef<{}>;
+  /**
+   * Conteúdo do modal. Pode ser string, TemplateRef ou Type.
+   */
+  nzContent?: string | TemplateRef<{}> | NzSafeAny;
   private cdr = inject(ChangeDetectorRef);
   private modal = inject(NzModalService);
   private viewContainerRef = inject(ViewContainerRef);
@@ -319,7 +328,10 @@ export class NzModalComponent<T extends ModalOptions = NzSafeAny, R = NzSafeAny>
   ngOnChanges(changes: SimpleChanges): void {
     const { nzVisible, nzMaskOptions, nzButtonOptions, nzDisplayOptions, nzContentOptions, ...otherChanges } = changes;
 
-    if ((nzMaskOptions || nzButtonOptions || nzDisplayOptions || nzContentOptions || Object.keys(otherChanges).length) && this.modalRef) {
+    if (
+      (nzMaskOptions || nzButtonOptions || nzDisplayOptions || nzContentOptions || Object.keys(otherChanges).length) &&
+      this.modalRef
+    ) {
       this.modalRef.updateConfig(getConfigFromComponent(this));
     }
 
