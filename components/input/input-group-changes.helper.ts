@@ -3,9 +3,16 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
 import { SimpleChanges, QueryList, TemplateRef } from '@angular/core';
-import { NzSizeLDSType, NzStatus } from 'ng-zorro-antd/core/types';
+
 import { NzFormNoStatusService } from 'ng-zorro-antd/core/form';
+import { NzValidateStatus, NzSizeLDSType } from 'ng-zorro-antd/core/types';
+
 import { NzInputDirective } from './input.directive';
 
 export function handleInputGroupChanges(
@@ -19,10 +26,10 @@ export function handleInputGroupChanges(
   nzAddOnBefore: string | TemplateRef<void> | undefined,
   nzAddOnAfterIcon: string | null | undefined,
   nzAddOnBeforeIcon: string | null | undefined,
-  nzStatus: NzStatus,
+  nzStatus: NzValidateStatus | undefined,
   listOfNzInputDirective: QueryList<NzInputDirective>,
   nzFormNoStatusService: NzFormNoStatusService | null,
-  setStatusStylesFn: (status: string, hasFeedback: boolean) => void,
+  setStatusStylesFn: (status: NzValidateStatus | undefined, hasFeedback: boolean) => void,
   hasFeedback: boolean
 ): {
   isLarge: boolean;
@@ -30,7 +37,18 @@ export function handleInputGroupChanges(
   isAffix: boolean;
   isAddOn: boolean;
 } {
-  const { nzSize: nzSizeChange, nzSuffix, nzPrefix, nzPrefixIcon, nzSuffixIcon, nzAddOnAfter, nzAddOnBefore, nzAddOnAfterIcon, nzAddOnBeforeIcon, nzStatus: nzStatusChange } = changes;
+  const {
+    nzSize: nzSizeChange,
+    nzSuffix: _nzSuffixChange,
+    nzPrefix: _nzPrefixChange,
+    nzPrefixIcon: _nzPrefixIconChange,
+    nzSuffixIcon: _nzSuffixIconChange,
+    nzAddOnAfter: _nzAddOnAfterChange,
+    nzAddOnBefore: _nzAddOnBeforeChange,
+    nzAddOnAfterIcon: _nzAddOnAfterIconChange,
+    nzAddOnBeforeIcon: _nzAddOnBeforeIconChange,
+    nzStatus: nzStatusChange
+  } = changes;
   let isLarge = false;
   let isSmall = false;
   let isAffix = false;

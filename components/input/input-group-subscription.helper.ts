@@ -3,16 +3,16 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { FocusMonitor } from '@angular/cdk/a11y';
+import { Direction, Directionality } from '@angular/cdk/bidi';
 import { DestroyRef, ElementRef, QueryList, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { merge } from 'rxjs';
 import { distinctUntilChanged, map, mergeMap, startWith, switchMap } from 'rxjs/operators';
-import { FocusMonitor } from '@angular/cdk/a11y';
-import { Direction, Directionality } from '@angular/cdk/bidi';
-import { NzFormStatusService } from 'ng-zorro-antd/core/form';
-import { NzInputDirective } from './input.directive';
 
-import { distinctUntilChanged } from 'rxjs/operators';
+import { NzFormStatusService } from 'ng-zorro-antd/core/form';
+
+import { NzInputDirective } from './input.directive';
 
 export function setupInputGroupSubscriptions(
   listOfNzInputDirective: QueryList<NzInputDirective>,
@@ -28,7 +28,10 @@ export function setupInputGroupSubscriptions(
   setDirFn: (dir: Direction) => void
 ): void {
   nzFormStatusService?.formStatusChanges
-    .pipe(distinctUntilChanged((pre, cur) => pre.status === cur.status && pre.hasFeedback === cur.hasFeedback), takeUntilDestroyed(destroyRef))
+    .pipe(
+      distinctUntilChanged((pre, cur) => pre.status === cur.status && pre.hasFeedback === cur.hasFeedback),
+      takeUntilDestroyed(destroyRef)
+    )
     .subscribe(({ status, hasFeedback }) => setStatusStylesFn(status, hasFeedback));
 
   focusMonitor

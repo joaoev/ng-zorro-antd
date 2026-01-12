@@ -3,9 +3,10 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { Renderer2, ElementRef, TemplateRef } from '@angular/core';
+
 import { NgClassInterface, NzValidateStatus } from 'ng-zorro-antd/core/types';
 import { getStatusClassNames } from 'ng-zorro-antd/core/util';
-import { Renderer2, ElementRef } from '@angular/core';
 
 export function setStatusStyles(
   status: NzValidateStatus,
@@ -30,9 +31,18 @@ export function setStatusStyles(
   const isFeedback = !!status && hasFeedback;
   const baseAffix = !!(nzSuffix || nzPrefix || nzPrefixIcon || nzSuffixIcon);
   const isAffix = baseAffix || (!isAddOn && hasFeedback);
-  const affixInGroupStatusCls = isAffix || isFeedback ? getStatusClassNames(`${prefixCls}-affix-wrapper`, status, hasFeedback) : {};
-  const affixStatusCls = getStatusClassNames(`${prefixCls}-affix-wrapper`, isAddOn ? '' : status, isAddOn ? false : hasFeedback);
-  const groupStatusCls = getStatusClassNames(`${prefixCls}-group-wrapper`, isAddOn ? status : '', isAddOn ? hasFeedback : false);
+  const affixInGroupStatusCls =
+    isAffix || isFeedback ? getStatusClassNames(`${prefixCls}-affix-wrapper`, status, hasFeedback) : {};
+  const affixStatusCls = getStatusClassNames(
+    `${prefixCls}-affix-wrapper`,
+    isAddOn ? '' : status,
+    isAddOn ? false : hasFeedback
+  );
+  const groupStatusCls = getStatusClassNames(
+    `${prefixCls}-group-wrapper`,
+    isAddOn ? status : '',
+    isAddOn ? hasFeedback : false
+  );
   const statusCls = { ...affixStatusCls, ...groupStatusCls };
   Object.keys(statusCls).forEach(key => {
     if (statusCls[key]) renderer.addClass(elementRef.nativeElement, key);

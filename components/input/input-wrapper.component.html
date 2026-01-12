@@ -68,7 +68,7 @@
         <span
           class="ant-input-clear-icon"
           [class.ant-input-clear-icon-has-suffix]="
-            nzSuffix() || suffix() || hasFeedback() || inputPasswordDir?.nzVisibilityToggle()
+            nzSuffixWrapper() || suffix() || hasFeedback() || inputPasswordDir?.nzVisibilityToggle()
           "
           [class.ant-input-clear-icon-hidden]="!inputDir().value() || disabled() || readOnly()"
           role="button"
@@ -92,7 +92,7 @@
           }
         </span>
       }
-      <ng-content select="[nzInputSuffix]">{{ nzSuffix() }}</ng-content>
+      <ng-content select="[nzInputSuffix]">{{ nzSuffixWrapper() }}</ng-content>
       @if (hasFeedback() && status()) {
         <nz-form-item-feedback-icon [status]="status()" />
       }

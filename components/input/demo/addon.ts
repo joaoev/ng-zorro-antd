@@ -36,7 +36,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
     </nz-input-wrapper>
     <br />
     <br />
-    <nz-input-wrapper nzAddonBefore="http://" nzSuffix=".com">
+    <nz-input-wrapper nzAddonBefore="http://" nzSuffixWrapper=".com">
       <input nz-input [(ngModel)]="value" />
     </nz-input-wrapper>
     <br />

@@ -74,7 +74,7 @@ export class NzInputWrapperComponent {
 
   readonly nzAllowClear = input(false, { transform: booleanAttribute });
   readonly nzPrefix = input<string>();
-  readonly nzSuffix = input<string>();
+  readonly nzSuffixWrapper = input<string>();
   readonly nzAddonBefore = input<string>();
   readonly nzAddonAfter = input<string>();
 
@@ -89,7 +89,8 @@ export class NzInputWrapperComponent {
 
   protected readonly hasPrefix = computed(() => !!this.nzPrefix() || !!this.prefix());
   protected readonly hasSuffix = computed(
-    () => !!this.nzSuffix() || !!this.suffix() || this.nzAllowClear() || this.hasFeedback() || this.inputPasswordDir
+    () =>
+      !!this.nzSuffixWrapper() || !!this.suffix() || this.nzAllowClear() || this.hasFeedback() || this.inputPasswordDir
   );
   protected readonly hasAffix = computed(() => this.hasPrefix() || this.hasSuffix());
   protected readonly hasAddonBefore = computed(() => !!this.nzAddonBefore() || !!this.addonBefore());

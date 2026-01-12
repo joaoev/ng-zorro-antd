@@ -27,20 +27,16 @@ import {
 } from '@angular/core';
 
 import { NzFormItemFeedbackIconComponent, NzFormNoStatusService, NzFormStatusService } from 'ng-zorro-antd/core/form';
-import { NgClassInterface, NzSizeLDSType, NzStatus, NzValidateStatus } from 'ng-zorro-antd/core/types';
+import { NgClassInterface, NzSizeLDSType, NzValidateStatus } from 'ng-zorro-antd/core/types';
 import { NZ_SPACE_COMPACT_ITEM_TYPE, NzSpaceCompactItemDirective } from 'ng-zorro-antd/space';
 
-import { NzInputGroupSlotComponent } from './input-group-slot.component';
-import { NzInputDirective } from './input.directive';
-import { setStatusStyles } from './input-group-status.helper';
-import { setupInputGroupSubscriptions } from './input-group-subscription.helper';
 import { handleInputGroupChanges } from './input-group-changes.helper';
 import { setupInputGroupContentInit } from './input-group-content.helper';
+import { NzInputGroupSlotComponent } from './input-group-slot.component';
+import { setStatusStyles } from './input-group-status.helper';
+import { setupInputGroupSubscriptions } from './input-group-subscription.helper';
+import { NzInputDirective } from './input.directive';
 
-@Directive({ selector: `nz-input-group[nzSuffix], nz-input-group[nzPrefix]` })
-export class NzInputGroupWhitSuffixOrPrefixDirective {
-  public readonly elementRef = inject(ElementRef);
-}
 @Component({
   selector: 'nz-input-group',
   exportAs: 'nzInputGroup',
@@ -89,7 +85,7 @@ export class NzInputGroupComponent implements AfterContentInit, OnChanges, OnIni
   @Input() nzAddOnBefore?: string | TemplateRef<void>;
   @Input() nzAddOnAfter?: string | TemplateRef<void>;
   @Input() nzPrefix?: string | TemplateRef<void>;
-  @Input() nzStatus: NzStatus = '';
+  @Input() nzStatus?: NzValidateStatus;
   @Input() nzSuffix?: string | TemplateRef<void>;
   @Input() nzSize: NzSizeLDSType = 'default';
   @Input({ transform: booleanAttribute }) nzSearch = false;
@@ -105,9 +101,16 @@ export class NzInputGroupComponent implements AfterContentInit, OnChanges, OnIni
   affixStatusCls: NgClassInterface = {};
   groupStatusCls: NgClassInterface = {};
   affixInGroupStatusCls: NgClassInterface = {};
-  status: NzValidateStatus = '';
+  status?: NzValidateStatus;
   hasFeedback: boolean = false;
-  constructor() { this.destroyRef.onDestroy(() => this.focusMonitor.stopMonitoring(this.elementRef)); }
+  constructor() {
+    this.destroyRef.onDestroy(() => this.focusMonitor.stopMonitoring(this.elementRef));
+  }
+
+  private toNzValidateStatus(value: unknown): NzValidateStatus | undefined {
+    const validStatuses: NzValidateStatus[] = ['success', 'warning', 'error', 'validating', ''];
+    return validStatuses.includes(value as NzValidateStatus) ? (value as NzValidateStatus) : undefined;
+  }
 
   updateChildrenInputSize = (): void => {
     if (this.listOfNzInputDirective) this.listOfNzInputDirective.forEach(item => item['size'].set(this.nzSize));
@@ -122,15 +125,20 @@ export class NzInputGroupComponent implements AfterContentInit, OnChanges, OnIni
       this.directionality,
       this.destroyRef,
       this.cdr,
-      (status, hasFeedback) => this.setStatusStyles(status, hasFeedback),
-      (focused) => this.focused = focused,
-      (disabled) => this.disabled = disabled,
-      (dir) => this.dir = dir
+      (status, hasFeedback) => this.setStatusStyles(status ?? '', hasFeedback),
+      focused => (this.focused = focused),
+      disabled => (this.disabled = disabled),
+      dir => (this.dir = dir)
     );
   };
   ngAfterContentInit = (): void => {
     this.updateChildrenInputSize();
-    setupInputGroupContentInit(this.listOfNzInputDirective, this.destroyRef, this.cdr, (disabled) => this.disabled = disabled);
+    setupInputGroupContentInit(
+      this.listOfNzInputDirective,
+      this.destroyRef,
+      this.cdr,
+      disabled => (this.disabled = disabled)
+    );
   };
   ngOnChanges = (changes: SimpleChanges): void => {
     const result = handleInputGroupChanges(
@@ -147,29 +155,37 @@ export class NzInputGroupComponent implements AfterContentInit, OnChanges, OnIni
       this.nzStatus,
       this.listOfNzInputDirective,
       this.nzFormNoStatusService,
-      (status, hasFeedback) => this.setStatusStyles(status, hasFeedback),
+      (status, hasFeedback) => this.setStatusStyles(status ?? '', hasFeedback),
       this.hasFeedback
     );
     if (changes['nzSize']) this.updateChildrenInputSize();
     this.isLarge = result.isLarge;
     this.isSmall = result.isSmall;
-    if (changes['nzSuffix'] || changes['nzPrefix'] || changes['nzPrefixIcon'] || changes['nzSuffixIcon']) this.isAffix = result.isAffix;
-    if (changes['nzAddOnAfter'] || changes['nzAddOnBefore'] || changes['nzAddOnAfterIcon'] || changes['nzAddOnBeforeIcon']) this.isAddOn = result.isAddOn;
+    if (changes['nzSuffix'] || changes['nzPrefix'] || changes['nzPrefixIcon'] || changes['nzSuffixIcon'])
+      this.isAffix = result.isAffix;
+    if (
+      changes['nzAddOnAfter'] ||
+      changes['nzAddOnBefore'] ||
+      changes['nzAddOnAfterIcon'] ||
+      changes['nzAddOnBeforeIcon']
+    )
+      this.isAddOn = result.isAddOn;
   };
-  private setStatusStyles = (status: NzValidateStatus, hasFeedback: boolean): void => {
+  private setStatusStyles = (status: NzValidateStatus | string, hasFeedback: boolean): void => {
+    const safeStatus = this.toNzValidateStatus(status) ?? '';
     const result = setStatusStyles(
-      status,
+      safeStatus,
       hasFeedback,
-      this.nzSuffix,
-      this.nzPrefix,
-      this.nzPrefixIcon,
-      this.nzSuffixIcon,
+      (this.nzSuffix as string) ?? '',
+      (this.nzPrefix as string) ?? '',
+      (this.nzPrefixIcon as string) ?? '',
+      (this.nzSuffixIcon as string) ?? '',
       this.isAddOn,
       this.prefixCls,
       this.renderer,
       this.elementRef
     );
-    this.status = result.status;
+    this.status = result.status === null || result.status === undefined ? '' : result.status;
     this.hasFeedback = result.hasFeedback;
     this.isFeedback = result.isFeedback;
     this.isAffix = result.isAffix;
