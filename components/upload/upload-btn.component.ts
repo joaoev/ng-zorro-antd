@@ -3,16 +3,13 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
-import { ENTER } from '@angular/cdk/keycodes';
 import { HttpClient, HttpEvent, HttpEventType, HttpHeaders, HttpRequest, HttpResponse } from '@angular/common/http';
-import { Component, DestroyRef, ElementRef, inject, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, DestroyRef, ElementRef, inject, Input, ViewChild, ViewEncapsulation } from '@angular/core';
 import { Observable, of, Subscription } from 'rxjs';
 import { filter, map, switchMap, tap } from 'rxjs/operators';
 
 import { warn } from 'ng-zorro-antd/core/logger';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
-import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 
 import { NzUploadFile, NzUploadXHRArgs, ZipButtonOptions } from './interface';
 
@@ -26,11 +23,13 @@ import { NzUploadFile, NzUploadXHRArgs, ZipButtonOptions } from './interface';
     '[attr.role]': '"button"',
     '[class.ant-upload-disabled]': 'options.disabled',
     '(drop)': 'onFileDrop($event)',
-    '(dragover)': 'onFileDrop($event)'
+    '(dragover)': 'onFileDrop($event)',
+    '(click)': 'onClick()',
+    '(keydown.enter)': 'onClick()'
   },
   encapsulation: ViewEncapsulation.None
 })
-export class NzUploadBtnComponent implements OnInit {
+export class NzUploadBtnComponent {
   reqs: Record<string, Subscription> = {};
   private destroyed = false;
   @ViewChild('file', { static: true }) file!: ElementRef<HTMLInputElement>;
@@ -40,7 +39,7 @@ export class NzUploadBtnComponent implements OnInit {
     if (this.options.disabled || !this.options.openFileDialogOnClick) {
       return;
     }
-    this.file.nativeElement.click();
+    (this.file as { ['nativeElement']: HTMLInputElement })['nativeElement'].click();
   }
 
   // skip safari bug
@@ -353,7 +352,6 @@ export class NzUploadBtnComponent implements OnInit {
   }
 
   private http = inject(HttpClient, { optional: true });
-  private elementRef = inject(ElementRef);
   private destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -366,24 +364,5 @@ export class NzUploadBtnComponent implements OnInit {
       this.destroyed = true;
       this.abort();
     });
-  }
-
-  ngOnInit(): void {
-    // Caretaker note: `input[type=file].click()` will open a native OS file picker,
-    // it doesn't require Angular to run `ApplicationRef.tick()`.
-    fromEventOutsideAngular(this.elementRef.nativeElement, 'click')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.onClick());
-
-    fromEventOutsideAngular<KeyboardEvent>(this.elementRef.nativeElement, 'keydown')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(event => {
-        if (this.options.disabled) {
-          return;
-        }
-        if (event.key === 'Enter' || event.keyCode === ENTER) {
-          this.onClick();
-        }
-      });
   }
 }

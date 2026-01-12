@@ -3,7 +3,6 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
-import { normalizePassiveListenerOptions, Platform } from '@angular/cdk/platform';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   AfterViewInit,
@@ -20,33 +19,19 @@ import {
   numberAttribute,
   OnChanges,
   Output,
-  Renderer2,
   SimpleChanges,
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Subject } from 'rxjs';
-import { takeUntil, throttleTime } from 'rxjs/operators';
 
 import { NzAffixModule } from 'ng-zorro-antd/affix';
 import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/config';
-import { NzScrollService } from 'ng-zorro-antd/core/services';
 import { NgStyleInterface, NzDirectionVHType } from 'ng-zorro-antd/core/types';
-import { fromEventOutsideAngular, numberAttributeWithZeroFallback } from 'ng-zorro-antd/core/util';
+import { numberAttributeWithZeroFallback } from 'ng-zorro-antd/core/util';
 
 import { NzAnchorLinkComponent } from './anchor-link.component';
-import { getOffsetTop } from './util';
-
-interface Section {
-  comp: NzAnchorLinkComponent;
-  top: number;
-}
-
-const VISIBLE_CLASSNAME = 'ant-anchor-ink-ball-visible';
-const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'anchor';
-const sharpMatcherRegx = /#([^#]+)$/;
-
-const passiveEventListenerOptions = normalizePassiveListenerOptions({ passive: true });
+import { NzAnchorScrollService } from './anchor-scroll.service';
+import { NZ_ANCHOR_CONFIG_MODULE_NAME } from './anchor.constants';
 
 @Component({
   selector: 'nz-anchor',
@@ -77,18 +62,17 @@ const passiveEventListenerOptions = normalizePassiveListenerOptions({ passive: t
     </ng-template>
   `,
   encapsulation: ViewEncapsulation.None,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [NzAnchorScrollService]
 })
 export class NzAnchorComponent implements AfterViewInit, OnChanges {
   public nzConfigService = inject(NzConfigService);
-  private scrollSrv = inject(NzScrollService);
   private cdr = inject(ChangeDetectorRef);
-  private platform = inject(Platform);
-  private renderer = inject(Renderer2);
   private doc: Document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
+  private scrollService = inject(NzAnchorScrollService);
 
-  readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
+  readonly _nzModuleName: NzConfigKey = NZ_ANCHOR_CONFIG_MODULE_NAME;
 
   @ViewChild('ink', { static: false }) private ink!: ElementRef;
 
@@ -122,19 +106,15 @@ export class NzAnchorComponent implements AfterViewInit, OnChanges {
   wrapperStyle: NgStyleInterface = { 'max-height': '100vh' };
 
   container?: HTMLElement | Window;
-  activeLink?: string;
 
   private links: NzAnchorLinkComponent[] = [];
-  private animating = false;
-  private destroy$ = new Subject<boolean>();
-  private handleScrollTimeoutID?: ReturnType<typeof setTimeout>;
+
+  get activeLink(): string | undefined {
+    return this.scrollService.activeLink;
+  }
 
   constructor() {
-    this.destroyRef.onDestroy(() => {
-      clearTimeout(this.handleScrollTimeoutID);
-      this.destroy$.next(true);
-      this.destroy$.complete();
-    });
+    this.scrollService.initDestroy(this.destroyRef);
   }
 
   registerLink(link: NzAnchorLinkComponent): void {
@@ -150,62 +130,36 @@ export class NzAnchorComponent implements AfterViewInit, OnChanges {
   }
 
   ngAfterViewInit(): void {
-    this.registerScrollEvent();
-  }
-  private registerScrollEvent(): void {
-    if (!this.platform.isBrowser) {
-      return;
-    }
-    this.destroy$.next(true);
-
-    fromEventOutsideAngular(this.getContainer(), 'scroll', passiveEventListenerOptions)
-      .pipe(throttleTime(50), takeUntil(this.destroy$))
-      .subscribe(() => this.handleScroll());
-    // Browser would maintain the scrolling position when refreshing.
-    // So we have to delay calculation in avoid of getting a incorrect result.
-    this.handleScrollTimeoutID = setTimeout(() => this.handleScroll());
+    this.scrollService.registerScrollEvent(this.getContainer(), () => this.handleScroll());
   }
 
   handleScroll(): void {
-    if (typeof document === 'undefined' || this.animating) {
+    if (typeof document === 'undefined' || this.scrollService.isAnimating()) {
       return;
     }
 
-    const sections: Section[] = [];
-    const offsetTop = this.nzTargetOffset ? this.nzTargetOffset : this.nzOffsetTop || 0;
-    const scope = offsetTop + this.nzBounds;
-    this.links.forEach(comp => {
-      const sharpLinkMatch = sharpMatcherRegx.exec(comp.nzHref.toString());
-      if (!sharpLinkMatch) {
-        return;
-      }
-      const target = this.doc.getElementById(sharpLinkMatch[1]);
-      if (target) {
-        const top = getOffsetTop(target, this.getContainer());
-        if (top < scope) {
-          sections.push({
-            top,
-            comp
-          });
-        }
-      }
-    });
+    const config = {
+      offsetTop: this.nzTargetOffset ?? this.nzOffsetTop ?? 0,
+      bounds: this.nzBounds,
+      targetOffset: this.nzTargetOffset,
+      container: this.getContainer()
+    };
+
+    const sections = this.scrollService.calculateSections(this.links, config);
 
     this.visible = !!sections.length;
     if (!this.visible) {
       this.clearActive();
       this.cdr.detectChanges();
     } else {
-      const maxSection = sections.reduce((prev, curr) => (curr.top > prev.top ? curr : prev));
+      const maxSection = this.scrollService.findMaxSection(sections);
       this.handleActive(maxSection.comp);
     }
     this.setVisible();
   }
 
   private clearActive(): void {
-    this.links.forEach(i => {
-      i.unsetActive();
-    });
+    this.links.forEach(i => i.unsetActive());
   }
 
   private setActive(comp?: NzAnchorLinkComponent): void {
@@ -214,13 +168,9 @@ export class NzAnchorComponent implements AfterViewInit, OnChanges {
     if (!targetComp) return;
 
     targetComp.setActive();
-    const linkNode = targetComp.getLinkTitleElement();
-    if (this.nzDirection === 'vertical') {
-      this.ink.nativeElement.style.top = `${linkNode.offsetTop + linkNode.clientHeight / 2 - 4.5}px`;
-    } else {
-      this.ink.nativeElement.style.left = `${linkNode.offsetLeft + linkNode.clientWidth / 2}px`;
-    }
-    this.activeLink = (comp || targetComp).nzHref;
+    this.scrollService.setInkPosition(this.ink, targetComp, this.nzDirection);
+    this.scrollService.activeLink = (comp || targetComp).nzHref;
+
     if (originalActiveLink !== this.activeLink) {
       this.nzChange.emit(this.activeLink);
     }
@@ -236,47 +186,33 @@ export class NzAnchorComponent implements AfterViewInit, OnChanges {
 
   private setVisible(): void {
     if (this.ink) {
-      const visible = this.visible;
-      if (visible) {
-        this.renderer.addClass(this.ink.nativeElement, VISIBLE_CLASSNAME);
-      } else {
-        this.renderer.removeClass(this.ink.nativeElement, VISIBLE_CLASSNAME);
-      }
+      this.scrollService.setInkVisibility(this.ink, this.visible);
     }
   }
 
   handleScrollTo(linkComp: NzAnchorLinkComponent): void {
-    const el = this.doc.querySelector<HTMLElement>(linkComp.nzHref);
-    if (!el) {
-      return;
-    }
+    const offsetTop = this.nzTargetOffset ?? this.nzOffsetTop ?? 0;
 
-    this.animating = true;
-    const containerScrollTop = this.scrollSrv.getScroll(this.getContainer());
-    const elOffsetTop = getOffsetTop(el, this.getContainer());
-    let targetScrollTop = containerScrollTop + elOffsetTop;
-    targetScrollTop -= this.nzTargetOffset !== undefined ? this.nzTargetOffset : this.nzOffsetTop || 0;
-    this.scrollSrv.scrollTo(this.getContainer(), targetScrollTop, {
-      callback: () => {
-        this.animating = false;
-        this.handleActive(linkComp);
-      }
+    this.scrollService.scrollTo(linkComp, this.getContainer(), offsetTop, () => {
+      this.handleActive(linkComp);
     });
+
     this.nzClick.emit(linkComp.nzHref);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     const { nzOffsetTop, nzContainer, nzCurrentAnchor } = changes;
+
     if (nzOffsetTop) {
-      this.wrapperStyle = {
-        'max-height': `calc(100vh - ${this.nzOffsetTop}px)`
-      };
+      this.wrapperStyle = { 'max-height': `calc(100vh - ${this.nzOffsetTop}px)` };
     }
+
     if (nzContainer) {
       const container = this.nzContainer;
       this.container = typeof container === 'string' ? this.doc.querySelector<HTMLElement>(container)! : container;
-      this.registerScrollEvent();
+      this.scrollService.registerScrollEvent(this.getContainer(), () => this.handleScroll());
     }
+
     if (nzCurrentAnchor) {
       this.setActive();
     }

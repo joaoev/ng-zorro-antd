@@ -435,11 +435,12 @@ export class NzTransferComponent implements OnInit, OnChanges {
     this.cdr.markForCheck();
     // render status if nzStatus is set
     this.statusCls = getStatusClassNames(this.prefixCls, status, hasFeedback);
+    const hostElement = (this.elementRef as { ['nativeElement']: HTMLElement })['nativeElement'];
     Object.keys(this.statusCls).forEach(status => {
       if (this.statusCls[status]) {
-        this.renderer.addClass(this.elementRef.nativeElement, status);
+        this.renderer.addClass(hostElement, status);
       } else {
-        this.renderer.removeClass(this.elementRef.nativeElement, status);
+        this.renderer.removeClass(hostElement, status);
       }
     });
   }

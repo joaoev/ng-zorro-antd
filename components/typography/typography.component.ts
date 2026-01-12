@@ -135,7 +135,7 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
   nzConfigService = inject(NzConfigService);
-  private el: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
+  private el: HTMLElement = (inject(ElementRef<HTMLElement>) as { ['nativeElement']: HTMLElement })['nativeElement'];
   private cdr = inject(ChangeDetectorRef);
   private viewContainerRef = inject(ViewContainerRef);
   private renderer = inject(Renderer2);
@@ -330,8 +330,8 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
     }
     const { viewRef, removeView } = this.getOriginContentViewRef();
     const fixedNodes = [this.textCopyRef, this.textEditRef]
-      .filter(e => e && e.nativeElement)
-      .map(e => e!.nativeElement);
+      .filter(e => e && (e as { ['nativeElement']?: HTMLElement })['nativeElement'])
+      .map(e => (e as { ['nativeElement']: HTMLElement })['nativeElement']);
     const expandableBtnElement = this.getExpandableBtnElement();
     if (expandableBtnElement) {
       fixedNodes.push(expandableBtnElement);
@@ -352,7 +352,9 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
       this.isEllipsis = ellipsis;
       this.nzOnEllipsis.emit(ellipsis);
     }
-    const ellipsisContainerNativeElement = this.ellipsisContainer!.nativeElement;
+    const ellipsisContainerNativeElement = (this.ellipsisContainer as { ['nativeElement']: HTMLSpanElement })[
+      'nativeElement'
+    ];
     while (ellipsisContainerNativeElement.firstChild) {
       this.renderer.removeChild(ellipsisContainerNativeElement, ellipsisContainerNativeElement.firstChild);
     }
