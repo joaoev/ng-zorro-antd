@@ -45,7 +45,7 @@ export class AffixStyleService {
     }
 
     this.updateRtlClass(wrapEl);
-    return (affixStyle && !originalAffixStyle) || (!affixStyle && originalAffixStyle);
+    return (!!affixStyle && !originalAffixStyle) || (!affixStyle && !!originalAffixStyle);
   }
 
   setPlaceholderStyle(placeholderNode: HTMLElement, placeholderStyle?: NgStyleInterface): void {
@@ -58,11 +58,7 @@ export class AffixStyleService {
     this.placeholderStyle = placeholderStyle;
   }
 
-  syncPlaceholderStyle(
-    placeholderNode: HTMLElement,
-    fixedEl: HTMLElement,
-    e: Event
-  ): NgStyleInterface | undefined {
+  syncPlaceholderStyle(placeholderNode: HTMLElement, fixedEl: HTMLElement, _e: Event): NgStyleInterface | undefined {
     if (!this.affixStyle) {
       return undefined;
     }
