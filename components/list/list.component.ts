@@ -28,7 +28,7 @@ import { NzDirectionVHType, NzSafeAny, NzSizeLDSType } from 'ng-zorro-antd/core/
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 
-import { NzListGrid } from './interface';
+import { NzListGrid, ListDisplayOptions, ListContentOptions } from './interface';
 import {
   NzListEmptyComponent,
   NzListFooterComponent,
@@ -141,19 +141,53 @@ export class NzListComponent implements AfterContentInit, OnChanges, OnInit {
   private directionality = inject(Directionality);
   private destroyRef = inject(DestroyRef);
 
+  // Agrupamento de inputs para reduzir o número de propriedades @Input
+  @Input() nzDisplayOptions: ListDisplayOptions = {};
+  @Input() nzContentOptions: ListContentOptions = {};
   @Input() nzDataSource?: NzSafeAny[];
-  @Input({ transform: booleanAttribute }) nzBordered = false;
   @Input() nzGrid?: NzListGrid | '' | null | undefined = '';
-  @Input() nzHeader?: string | TemplateRef<void>;
-  @Input() nzFooter?: string | TemplateRef<void>;
-  @Input() nzItemLayout: NzDirectionVHType = 'horizontal';
   @Input() nzRenderItem: TemplateRef<{ $implicit: NzSafeAny; index: number }> | null = null;
-  @Input({ transform: booleanAttribute }) nzLoading = false;
-  @Input() nzLoadMore: TemplateRef<void> | null = null;
-  @Input() nzPagination?: TemplateRef<void>;
-  @Input() nzSize: NzSizeLDSType = 'default';
-  @Input({ transform: booleanAttribute }) nzSplit = true;
-  @Input() nzNoResult?: string | TemplateRef<void>;
+
+  // Getters para acessar valores individuais com fallback para valores padrão
+  get nzBordered(): boolean {
+    return this.nzDisplayOptions.bordered ?? false;
+  }
+
+  get nzSize(): NzSizeLDSType {
+    return this.nzDisplayOptions.size ?? 'default';
+  }
+
+  get nzSplit(): boolean {
+    return this.nzDisplayOptions.split ?? true;
+  }
+
+  get nzItemLayout(): NzDirectionVHType {
+    return this.nzDisplayOptions.itemLayout ?? 'horizontal';
+  }
+
+  get nzLoading(): boolean {
+    return this.nzDisplayOptions.loading ?? false;
+  }
+
+  get nzHeader(): string | TemplateRef<void> | undefined {
+    return this.nzContentOptions.header;
+  }
+
+  get nzFooter(): string | TemplateRef<void> | undefined {
+    return this.nzContentOptions.footer;
+  }
+
+  get nzLoadMore(): TemplateRef<void> | null {
+    return this.nzContentOptions.loadMore ?? null;
+  }
+
+  get nzPagination(): TemplateRef<void> | undefined {
+    return this.nzContentOptions.pagination;
+  }
+
+  get nzNoResult(): string | TemplateRef<void> | undefined {
+    return this.nzContentOptions.noResult;
+  }
 
   @ContentChild(NzListFooterComponent) nzListFooterComponent!: NzListFooterComponent;
   @ContentChild(NzListPaginationComponent) nzListPaginationComponent!: NzListPaginationComponent;
@@ -161,7 +195,7 @@ export class NzListComponent implements AfterContentInit, OnChanges, OnInit {
 
   hasSomethingAfterLastItem = false;
   dir: Direction = 'ltr';
-  private itemLayoutNotifySource = new BehaviorSubject<NzDirectionVHType>(this.nzItemLayout);
+  private itemLayoutNotifySource = new BehaviorSubject<NzDirectionVHType>('horizontal');
 
   get itemLayoutNotify$(): Observable<NzDirectionVHType> {
     return this.itemLayoutNotifySource.asObservable();
@@ -173,6 +207,7 @@ export class NzListComponent implements AfterContentInit, OnChanges, OnInit {
 
   ngOnInit(): void {
     this.dir = this.directionality.value;
+    this.itemLayoutNotifySource.next(this.nzItemLayout);
     this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((direction: Direction) => {
       this.dir = direction;
     });
@@ -189,7 +224,7 @@ export class NzListComponent implements AfterContentInit, OnChanges, OnInit {
     );
   }
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.nzItemLayout) {
+    if (changes.nzDisplayOptions) {
       this.itemLayoutNotifySource.next(this.nzItemLayout);
     }
   }
