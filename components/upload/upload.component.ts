@@ -48,6 +48,7 @@ import {
   ZipButtonOptions,
   type NzBeforeUploadFileType
 } from './interface';
+import { UploadCallbacks, UploadDisplayOptions, UploadFileOptions, UploadRequestOptions, UploadTemplates } from './upload.types';
 import { NzUploadBtnComponent } from './upload-btn.component';
 import { NzUploadListComponent } from './upload-list.component';
 
@@ -81,52 +82,133 @@ export class NzUploadComponent implements OnInit, AfterViewInit, OnChanges {
 
   // #region fields
 
-  @Input() nzType: NzUploadType = 'select';
-  @Input({ transform: numberAttribute }) nzLimit = 0;
-  @Input({ transform: numberAttribute }) nzSize = 0;
-
-  @Input() nzFileType?: string;
-  @Input() nzAccept?: string | string[];
-  @Input() nzAction?: string | ((file: NzUploadFile) => string | Observable<string>);
-  @Input({ transform: booleanAttribute }) nzDirectory = false;
-  @Input({ transform: booleanAttribute }) nzOpenFileDialogOnClick = true;
-  @Input() nzBeforeUpload?: (file: NzUploadFile, fileList: NzUploadFile[]) => NzBeforeUploadFileType;
-  @Input() nzCustomRequest?: (item: NzUploadXHRArgs) => Subscription;
-  @Input() nzData?: {} | ((file: NzUploadFile) => {} | Observable<{}>);
-  @Input() nzFilter: UploadFilter[] = [];
+  @Input() nzRequestOptions: UploadRequestOptions = {};
+  @Input() nzFileOptions: UploadFileOptions = {};
+  @Input() nzDisplayOptions: UploadDisplayOptions = {};
+  @Input() nzCallbacks: UploadCallbacks = {};
+  @Input() nzTemplates: UploadTemplates = {};
   @Input() nzFileList: NzUploadFile[] = [];
-  @Input({ transform: booleanAttribute }) nzDisabled = false;
-  @Input() nzHeaders?: {} | ((file: NzUploadFile) => {} | Observable<{}>);
-  @Input() nzListType: NzUploadListType = 'text';
-  @Input({ transform: booleanAttribute }) nzMultiple = false;
-  @Input() nzName = 'file';
 
   private _showUploadList: boolean | NzShowUploadList = true;
+
+  // Getters para manter compatibilidade com código existente
+  get nzType(): NzUploadType {
+    return this.nzDisplayOptions.type ?? 'select';
+  }
+
+  get nzListType(): NzUploadListType {
+    return this.nzDisplayOptions.listType ?? 'text';
+  }
+
+  get nzShowButton(): boolean {
+    return this.nzDisplayOptions.showButton ?? true;
+  }
+
+  get nzDisabled(): boolean {
+    return this.nzDisplayOptions.disabled ?? false;
+  }
 
   @Input()
   set nzShowUploadList(value: boolean | NzShowUploadList) {
     this._showUploadList = typeof value === 'boolean' ? toBoolean(value) : value;
+    this.nzDisplayOptions = { ...this.nzDisplayOptions, showUploadList: value };
   }
 
   get nzShowUploadList(): boolean | NzShowUploadList {
-    return this._showUploadList;
+    return this.nzDisplayOptions.showUploadList ?? this._showUploadList;
   }
 
-  @Input({ transform: booleanAttribute }) nzShowButton = true;
-  @Input({ transform: booleanAttribute }) nzWithCredentials = false;
+  get nzAction(): string | ((file: NzUploadFile) => string | Observable<string>) | undefined {
+    return this.nzRequestOptions.action;
+  }
 
-  @Input() nzRemove?: (file: NzUploadFile) => boolean | Observable<boolean>;
-  @Input() nzPreview?: (file: NzUploadFile) => void;
-  @Input() nzPreviewFile?: (file: NzUploadFile) => Observable<string>;
-  @Input() nzPreviewIsImage?: (file: NzUploadFile) => boolean;
-  /**
-   * @deprecated will be removed in v22.0.0
-   * Use `nzBeforeUpload` instead.
-   */
-  @Input() nzTransformFile?: (file: NzUploadFile) => NzUploadTransformFileType;
-  @Input() nzDownload?: (file: NzUploadFile) => void;
-  @Input() nzIconRender: NzIconRenderTemplate | null = null;
-  @Input() nzFileListRender: TemplateRef<{ $implicit: NzUploadFile[] }> | null = null;
+  get nzData(): {} | ((file: NzUploadFile) => {} | Observable<{}>) | undefined {
+    return this.nzRequestOptions.data;
+  }
+
+  get nzHeaders(): {} | ((file: NzUploadFile) => {} | Observable<{}>) | undefined {
+    return this.nzRequestOptions.headers;
+  }
+
+  get nzName(): string {
+    return this.nzRequestOptions.name ?? 'file';
+  }
+
+  get nzWithCredentials(): boolean {
+    return this.nzRequestOptions.withCredentials ?? false;
+  }
+
+  get nzCustomRequest(): ((item: NzUploadXHRArgs) => Subscription) | undefined {
+    return this.nzRequestOptions.customRequest;
+  }
+
+  get nzAccept(): string | string[] | undefined {
+    return this.nzFileOptions.accept;
+  }
+
+  get nzFileType(): string | undefined {
+    return this.nzFileOptions.fileType;
+  }
+
+  get nzLimit(): number {
+    return this.nzFileOptions.limit ?? 0;
+  }
+
+  get nzSize(): number {
+    return this.nzFileOptions.size ?? 0;
+  }
+
+  get nzFilter(): UploadFilter[] {
+    return this.nzFileOptions.filter ?? [];
+  }
+
+  get nzDirectory(): boolean {
+    return this.nzFileOptions.directory ?? false;
+  }
+
+  get nzMultiple(): boolean {
+    return this.nzFileOptions.multiple ?? false;
+  }
+
+  get nzOpenFileDialogOnClick(): boolean {
+    return this.nzFileOptions.openFileDialogOnClick ?? true;
+  }
+
+  get nzBeforeUpload(): ((file: NzUploadFile, fileList: NzUploadFile[]) => NzBeforeUploadFileType) | undefined {
+    return this.nzCallbacks.beforeUpload;
+  }
+
+  get nzRemove(): ((file: NzUploadFile) => boolean | Observable<boolean>) | undefined {
+    return this.nzCallbacks.remove;
+  }
+
+  get nzPreview(): ((file: NzUploadFile) => void) | undefined {
+    return this.nzCallbacks.preview;
+  }
+
+  get nzPreviewFile(): ((file: NzUploadFile) => Observable<string>) | undefined {
+    return this.nzCallbacks.previewFile;
+  }
+
+  get nzPreviewIsImage(): ((file: NzUploadFile) => boolean) | undefined {
+    return this.nzCallbacks.previewIsImage;
+  }
+
+  get nzTransformFile(): ((file: NzUploadFile) => NzUploadTransformFileType) | undefined {
+    return this.nzCallbacks.transformFile;
+  }
+
+  get nzDownload(): ((file: NzUploadFile) => void) | undefined {
+    return this.nzCallbacks.download;
+  }
+
+  get nzIconRender(): NzIconRenderTemplate | null {
+    return this.nzTemplates.iconRender ?? null;
+  }
+
+  get nzFileListRender(): TemplateRef<{ $implicit: NzUploadFile[] }> | null {
+    return this.nzTemplates.fileListRender ?? null;
+  }
 
   readonly nzMaxCount = input<number>();
 
@@ -136,12 +218,15 @@ export class NzUploadComponent implements OnInit, AfterViewInit, OnChanges {
   _btnOptions?: ZipButtonOptions;
 
   private zipOptions(): this {
-    if (typeof this.nzShowUploadList === 'boolean' && this.nzShowUploadList) {
-      this.nzShowUploadList = {
+    const currentShowUploadList = this.nzShowUploadList;
+    if (typeof currentShowUploadList === 'boolean' && currentShowUploadList) {
+      const newValue: NzShowUploadList = {
         showPreviewIcon: true,
         showRemoveIcon: true,
         showDownloadIcon: true
       };
+      this._showUploadList = newValue;
+      this.nzDisplayOptions = { ...this.nzDisplayOptions, showUploadList: newValue };
     }
     // filters
     const filters: UploadFilter[] = this.nzFilter.slice();
