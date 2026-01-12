@@ -18,11 +18,10 @@ import {
   SimpleChanges,
   TemplateRef,
   ViewEncapsulation,
-  booleanAttribute,
   inject,
-  input,
-  numberAttribute
+  input
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReplaySubject } from 'rxjs';
 
 import { NzConfigKey, NzConfigService, PaginationConfig } from 'ng-zorro-antd/core/config';
@@ -80,7 +79,12 @@ export class NzPaginationComponent implements OnInit, OnChanges {
 
   // Getters para acessar valores individuais com fallback para valores padrão e configuração global
   private get config(): PaginationConfig {
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.pagination || {};
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    // Faz o type guard para garantir que é PaginationConfig
+    if (config && (config as PaginationConfig).nzSize !== undefined) {
+      return config as PaginationConfig;
+    }
+    return {};
   }
 
   get nzTotal(): number {
@@ -139,29 +143,37 @@ export class NzPaginationComponent implements OnInit, OnChanges {
   private total$ = new ReplaySubject<number>(1);
 
   onPageIndexChange = (index: number): void => {
-    const lastIndex = getLastIndex(this.nzTotal, this.nzPageSize);
-    const validIndex = validatePageIndex(index, lastIndex);
+    const lastIndex = this.getLastIndex(this.nzTotal, this.nzPageSize);
+    const validIndex = this.validatePageIndex(index, lastIndex);
     if (validIndex !== this.nzPageIndex && !this.nzDisabled) {
       this._pageIndex = validIndex;
       this.nzPageIndexChange.emit(validIndex);
     }
+  };
+  /**
+   * Garante que o índice da página esteja dentro dos limites válidos.
+   */
+  private validatePageIndex(index: number, lastIndex: number): number {
+    if (index < 1) return 1;
+    if (index > lastIndex) return lastIndex;
+    return index;
   }
 
   onPageSizeChange(size: number): void {
     this._pageSize = size;
     this.nzPageSizeChange.emit(size);
-    const lastIndex = getLastIndex(this.nzTotal, this.nzPageSize);
+    const lastIndex = this.getLastIndex(this.nzTotal, this.nzPageSize);
     if (this.nzPageIndex > lastIndex) this.onPageIndexChange(lastIndex);
-  };
+  }
   onTotalChange = (total: number): void => {
-    const lastIndex = getLastIndex(total, this.nzPageSize);
+    const lastIndex = this.getLastIndex(total, this.nzPageSize);
     if (this.nzPageIndex > lastIndex) {
       Promise.resolve().then(() => {
         this.onPageIndexChange(lastIndex);
         this.cdr.markForCheck();
       });
     }
-  }
+  };
 
   getLastIndex(total: number, pageSize: number): number {
     return Math.ceil(total / pageSize);
@@ -208,7 +220,7 @@ export class NzPaginationComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     const { nzState, nzOptions } = changes;
-    
+
     if (nzState) {
       const state = nzState.currentValue as PaginationState;
       if (state.total !== undefined) {
@@ -235,5 +247,5 @@ export class NzPaginationComponent implements OnInit, OnChanges {
       }
     }
     if (changes['nzSize']) this.size = changes['nzSize'].currentValue;
-  };
+  }
 }
