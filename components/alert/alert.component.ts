@@ -3,6 +3,12 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+export type { NzAlertType } from './alert-icon.service';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
 import { Direction, Directionality } from '@angular/cdk/bidi';
 import {
   AnimationCallbackEvent,
@@ -28,9 +34,9 @@ import { NzConfigKey, onConfigChangeEventForComponent, WithConfig } from 'ng-zor
 import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 
-import { AlertIconService, NzAlertType } from './alert-icon.service';
-import { AlertConfigService } from './alert-config.service';
 import { AlertAnimationService } from './alert-animation.service';
+import { AlertConfigService } from './alert-config.service';
+import { AlertIconService, NzAlertType } from './alert-icon.service';
 
 const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'alert';
 
