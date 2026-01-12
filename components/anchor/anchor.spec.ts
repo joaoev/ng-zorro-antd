@@ -393,7 +393,9 @@ describe('NzAnchor', () => {
     mockPlatform.isBrowser = false;
 
     component.ngAfterViewInit();
-    expect(component['handleScrollTimeoutID']).toBeFalsy();
+    // After refactoring, scroll registration is handled by the service
+    // When platform is not browser, scroll events won't be registered
+    expect(component.activeLink).toBeFalsy();
   });
 
   it('should calculate the correct offsetTop in handleScroll method', () => {

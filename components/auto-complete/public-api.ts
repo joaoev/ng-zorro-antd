@@ -5,6 +5,8 @@
 
 export * from './autocomplete.module';
 export * from './autocomplete.component';
+export * from './autocomplete.types';
 export * from './autocomplete-trigger.directive';
 export * from './autocomplete-option.component';
+export * from './autocomplete-option.service';
 export * from './autocomplete-optgroup.component';

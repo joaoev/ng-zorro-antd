@@ -13,7 +13,6 @@ import {
   Component,
   ContentChildren,
   DestroyRef,
-  Directive,
   ElementRef,
   Input,
   OnChanges,

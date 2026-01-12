@@ -56,7 +56,7 @@ export class NzAffixComponent implements OnChanges {
 
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
-  @ViewChild('fixedEl', { static: true }) private fixedEl!: ElementRef<HTMLDivElement>;
+  @ViewChild('fixedEl', { static: true }) private readonly fixedEl!: ElementRef<HTMLDivElement>;
 
   @Input() nzTarget?: string | Element | Window;
 
@@ -72,7 +72,11 @@ export class NzAffixComponent implements OnChanges {
 
   private get target(): Element | Window {
     const el = this.nzTarget;
-    return (typeof el === 'string' ? this.document.querySelector(el) : el) || window;
+    const resolvedTarget = typeof el === 'string' ? this.document.querySelector(el) : el;
+
+    return (
+      (resolvedTarget as Element | Window | null) ?? (this.document.defaultView as Window | null) ?? this.document.body
+    );
   }
 
   constructor() {

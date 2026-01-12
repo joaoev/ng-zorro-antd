@@ -30,7 +30,7 @@ import {
 } from '@angular/core';
 
 import { NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
-import { getPlacementName, POSITION_MAP, POSITION_TYPE_HORIZONTAL } from 'ng-zorro-antd/core/overlay';
+import { POSITION_TYPE_HORIZONTAL } from 'ng-zorro-antd/core/overlay';
 
 import { NzMenuItemComponent } from './menu-item.component';
 import { MenuService } from './menu.service';
@@ -141,12 +141,7 @@ export class NzSubMenuComponent implements OnInit, AfterContentInit, OnChanges {
   }
 
   onPositionChange(position: ConnectedOverlayPositionChange): void {
-    const placement = getPlacementName(position);
-    if (placement === 'rightTop' || placement === 'rightBottom' || placement === 'right') {
-      this.position = 'right';
-    } else if (placement === 'leftTop' || placement === 'leftBottom' || placement === 'left') {
-      this.position = 'left';
-    }
+    this.position = this.nzSubmenuService.getPositionFromChange(position);
   }
 
   ngOnInit = (): void => {
