@@ -29,13 +29,14 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject } from 'rxjs';
-import { filter, startWith } from 'rxjs/operators';
 
 import { NzConfigKey, onConfigChangeEventForComponent, WithConfig } from 'ng-zorro-antd/core/config';
 import { NzSizeLDSType } from 'ng-zorro-antd/core/types';
 import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 import { NzIconDirective, NzIconModule } from 'ng-zorro-antd/icon';
 import { NZ_SPACE_COMPACT_ITEM_TYPE, NZ_SPACE_COMPACT_SIZE, NzSpaceCompactItemDirective } from 'ng-zorro-antd/space';
+import { setupLoadingIcon, insertTextSpans, setupElementOnlyDetection } from './button-init.helper';
+import { setupClickHandler } from './button-events.helper';
 
 export type NzButtonType = 'primary' | 'default' | 'dashed' | 'link' | 'text' | null;
 export type NzButtonShape = 'circle' | 'round' | null;
@@ -49,14 +50,7 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'button';
   imports: [NzIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  template: `
-    @if (nzLoading) {
-      <span class="ant-btn-icon ant-btn-loading-icon">
-        <nz-icon nzType="loading" />
-      </span>
-    }
-    <ng-content></ng-content>
-  `,
+  templateUrl: './button.component.html',
   host: {
     class: 'ant-btn',
     '[class.ant-btn-default]': `nzType === 'default'`,
@@ -127,40 +121,17 @@ export class NzButtonComponent implements OnChanges, AfterViewInit, AfterContent
       this.size.set(this.nzSize);
       this.cdr.markForCheck();
     });
-
-    afterEveryRender({
-      read: () => {
-        const { children } = this.elementRef.nativeElement;
-        const visibleElement = Array.from(children).filter(
-          element => (element as HTMLElement).style.display !== 'none'
-        );
-        this.elementOnly.set(visibleElement.length === 1);
-      }
-    });
+    setupElementOnlyDetection(this.elementRef, (v) => this.elementOnly.set(v), afterEveryRender);
   }
 
   ngOnInit(): void {
     this.size.set(this.nzSize);
-
-    this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((direction: Direction) => {
-      this.dir = direction;
+    this.dir = this.directionality.value;
+    this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((d: Direction) => {
+      this.dir = d;
       this.cdr.detectChanges();
     });
-
-    this.dir = this.directionality.value;
-
-    // Caretaker note: this event listener could've been added through `host.click` or `HostListener`.
-    // The compiler generates the `ɵɵlistener` instruction which wraps the actual listener internally into the
-    // function, which runs `markDirty()` before running the actual listener (the decorated class method).
-    // Since we're preventing the default behavior and stopping event propagation this doesn't require Angular to run the change detection.
-    fromEventOutsideAngular<MouseEvent>(this.elementRef.nativeElement, 'click', { capture: true })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(event => {
-        if ((this.disabled && (event.target as HTMLElement)?.tagName === 'A') || this.nzLoading) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-        }
-      });
+    setupClickHandler(this.elementRef, this.disabled, this.nzLoading, this.destroyRef);
   }
 
   ngOnChanges({ nzLoading, nzSize }: SimpleChanges): void {
@@ -173,34 +144,10 @@ export class NzButtonComponent implements OnChanges, AfterViewInit, AfterContent
   }
 
   ngAfterViewInit(): void {
-    this.insertSpan();
+    insertTextSpans(this.elementRef, this.renderer);
   }
 
   ngAfterContentInit(): void {
-    this.loading$
-      .pipe(
-        startWith(this.nzLoading),
-        filter(() => !!this.nzIconDirectiveElement),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(loading => {
-        const nativeElement = this.nzIconDirectiveElement.nativeElement;
-        if (loading) {
-          this.renderer.setStyle(nativeElement, 'display', 'none');
-        } else {
-          this.renderer.removeStyle(nativeElement, 'display');
-        }
-      });
-  }
-
-  insertSpan(): void {
-    this.elementRef.nativeElement.childNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE && node.textContent!.trim().length > 0) {
-        const span = this.renderer.createElement('span');
-        const parent = this.renderer.parentNode(node);
-        this.renderer.insertBefore(parent, span, node);
-        this.renderer.appendChild(span, node);
-      }
-    });
+    setupLoadingIcon(this.loading$, this.nzLoading, this.nzIconDirectiveElement, this.renderer, this.destroyRef);
   }
 }
