@@ -8,7 +8,6 @@ import { Platform } from '@angular/cdk/platform';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   AfterViewInit,
-  booleanAttribute,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -19,7 +18,6 @@ import {
   EventEmitter,
   inject,
   Input,
-  numberAttribute,
   OnChanges,
   OnInit,
   Output,
@@ -33,16 +31,21 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
-import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/config';
+import { NzConfigKey, NzConfigService } from 'ng-zorro-antd/core/config';
 import { cancelAnimationFrame, requestAnimationFrame } from 'ng-zorro-antd/core/polyfill';
 import { NzResizeService } from 'ng-zorro-antd/core/services';
 import { NzTSType } from 'ng-zorro-antd/core/types';
 import { isStyleSupport, measure } from 'ng-zorro-antd/core/util';
 import { NzI18nService, NzTextI18nInterface } from 'ng-zorro-antd/i18n';
 
-import { TypographyBehaviorOptions, TypographyCopyOptions, TypographyEditOptions, TypographyEllipsisOptions } from './typography.types';
 import { NzTextCopyComponent } from './text-copy.component';
 import { NzTextEditComponent } from './text-edit.component';
+import {
+  TypographyBehaviorOptions,
+  TypographyCopyOptions,
+  TypographyEditOptions,
+  TypographyEllipsisOptions
+} from './typography.types';
 
 const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'typography';
 const EXPAND_ELEMENT_CLASSNAME = 'ant-typography-expand';
@@ -152,7 +155,7 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
   @Input() nzEllipsisOptions: TypographyEllipsisOptions = {};
   @Input() nzContent?: string;
   @Input() nzType: 'secondary' | 'warning' | 'danger' | 'success' | undefined;
-  
+
   // Getters para manter compatibilidade com código existente
   get nzCopyable(): boolean {
     return this.nzBehaviorOptions.copyable ?? false;
@@ -178,35 +181,51 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
     if (this.nzCopyOptions.copyTooltips !== undefined) {
       return this.nzCopyOptions.copyTooltips;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzCopyTooltips;
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    return config && 'nzCopyTooltips' in config
+      ? (config as { nzCopyTooltips?: [NzTSType, NzTSType] | null }).nzCopyTooltips
+      : undefined;
   }
 
   get nzCopyIcons(): [NzTSType, NzTSType] {
     if (this.nzCopyOptions.copyIcons !== undefined) {
       return this.nzCopyOptions.copyIcons;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzCopyIcons ?? ['copy', 'check'];
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && 'nzCopyIcons' in config && Array.isArray((config as Record<string, unknown>).nzCopyIcons)) {
+      return (config as { nzCopyIcons: [NzTSType, NzTSType] }).nzCopyIcons;
+    }
+    return ['copy', 'check'];
   }
 
   get nzEditTooltip(): null | NzTSType | undefined {
     if (this.nzEditOptions.editTooltip !== undefined) {
       return this.nzEditOptions.editTooltip;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzEditTooltip;
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && typeof (config as { nzEditTooltip?: NzTSType | null }).nzEditTooltip !== 'undefined') {
+      return (config as { nzEditTooltip?: NzTSType | null }).nzEditTooltip;
+    }
+    return undefined;
   }
 
   get nzEditIcon(): NzTSType {
     if (this.nzEditOptions.editIcon !== undefined) {
       return this.nzEditOptions.editIcon;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzEditIcon ?? 'edit';
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    return (config && 'nzEditIcon' in config ? (config as { nzEditIcon?: NzTSType }).nzEditIcon : undefined) ?? 'edit';
   }
 
   get nzEllipsisRows(): number {
     if (this.nzEllipsisOptions.ellipsisRows !== undefined) {
       return this.nzEllipsisOptions.ellipsisRows;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzEllipsisRows ?? 1;
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && typeof (config as { nzEllipsisRows?: number }).nzEllipsisRows === 'number') {
+      return (config as { nzEllipsisRows: number }).nzEllipsisRows;
+    }
+    return 1;
   }
 
   get nzCopyText(): string | undefined {
