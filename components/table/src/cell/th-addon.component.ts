@@ -19,7 +19,6 @@ import {
   SimpleChange,
   SimpleChanges,
   ViewEncapsulation,
-  booleanAttribute,
   inject,
   DestroyRef
 } from '@angular/core';
@@ -27,9 +26,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
-import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/config';
+import { NzConfigKey, NzConfigService } from 'ng-zorro-antd/core/config';
 import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 
+import { ThAddonFilterOptions, ThAddonSortOptions } from './th-addon.types';
 import { NzTableFilterComponent } from '../addon/filter.component';
 import { NzTableSortersComponent } from '../addon/sorters.component';
 import {
@@ -39,7 +39,6 @@ import {
   NzTableSortFn,
   NzTableSortOrder
 } from '../table.types';
-import { ThAddonFilterOptions, ThAddonSortOptions } from './th-addon.types';
 
 const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'table';
 
@@ -121,7 +120,11 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
     if (this.nzSortOptions.sortDirections !== undefined) {
       return this.nzSortOptions.sortDirections;
     }
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzSortDirections ?? ['ascend', 'descend', null];
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && Array.isArray((config as unknown as { nzSortDirections?: NzTableSortOrder[] }).nzSortDirections)) {
+      return (config as unknown as { nzSortDirections?: NzTableSortOrder[] }).nzSortDirections!;
+    }
+    return ['ascend', 'descend', null];
   }
 
   get nzSortFn(): NzTableSortFn<T> | boolean | null {
@@ -129,7 +132,7 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
   }
 
   get nzShowSort(): boolean {
-    return this._nzShowSort ?? this.nzSortOptions.showSort ?? false;
+    return !!(this._nzShowSort ?? this.nzSortOptions.showSort);
   }
 
   get nzFilters(): NzTableFilterList {
@@ -141,15 +144,15 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
   }
 
   get nzFilterMultiple(): boolean {
-    return this.nzFilterOptions.filterMultiple ?? true;
+    return this.nzFilterOptions.filterMultiple !== undefined ? this.nzFilterOptions.filterMultiple : true;
   }
 
   get nzShowFilter(): boolean {
-    return this._nzShowFilter ?? this.nzFilterOptions.showFilter ?? false;
+    return !!(this._nzShowFilter ?? this.nzFilterOptions.showFilter);
   }
 
   get nzCustomFilter(): boolean {
-    return this.nzFilterOptions.customFilter ?? false;
+    return !!this.nzFilterOptions.customFilter;
   }
   @Output() readonly nzCheckedChange = new EventEmitter<boolean>();
   @Output() readonly nzSortOrderChange = new EventEmitter<string | null>();
@@ -209,10 +212,7 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const {
-      nzSortOptions,
-      nzFilterOptions
-    } = changes;
+    const { nzSortOptions, nzFilterOptions } = changes;
 
     if (nzSortOptions) {
       const current = nzSortOptions.currentValue as ThAddonSortOptions | undefined;
@@ -220,7 +220,11 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
 
       if (current?.sortDirections && current.sortDirections.length) {
         this.sortDirections = current.sortDirections;
-      } else if (previous?.sortDirections !== current?.sortDirections && this.nzSortDirections && this.nzSortDirections.length) {
+      } else if (
+        previous?.sortDirections !== current?.sortDirections &&
+        this.nzSortDirections &&
+        this.nzSortDirections.length
+      ) {
         this.sortDirections = this.nzSortDirections;
       }
 
@@ -237,7 +241,7 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
       }
 
       const isFirstChange = (change: SimpleChange | undefined): boolean =>
-        change && change.firstChange && change.currentValue !== undefined;
+        !!(change && change.firstChange && change.currentValue !== undefined);
 
       if (!this.isNzShowSortChanged && isFirstChange(nzSortOptions)) {
         if (current?.sortOrder !== undefined || current?.sortFn !== undefined) {
@@ -258,7 +262,7 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
       }
 
       const isFirstChange = (change: SimpleChange | undefined): boolean =>
-        change && change.firstChange && change.currentValue !== undefined;
+        !!(change && change.firstChange && change.currentValue !== undefined);
 
       if (!this.isNzShowFilterChanged && isFirstChange(nzFilterOptions)) {
         if (current?.filters !== undefined) {
@@ -275,7 +279,12 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
     if (nzSortOptions || nzFilterOptions) {
       const currentSort = nzSortOptions?.currentValue as ThAddonSortOptions | undefined;
       const currentFilter = nzFilterOptions?.currentValue as ThAddonFilterOptions | undefined;
-      if (currentSort?.sortFn || currentFilter?.filterFn || currentSort?.sortPriority !== undefined || currentFilter?.filters) {
+      if (
+        currentSort?.sortFn ||
+        currentFilter?.filterFn ||
+        currentSort?.sortPriority !== undefined ||
+        currentFilter?.filters
+      ) {
         this.updateCalcOperator();
       }
     }
