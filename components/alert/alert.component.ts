@@ -5,7 +5,6 @@
 
 import { Direction, Directionality } from '@angular/cdk/bidi';
 import {
-  ANIMATION_MODULE_TYPE,
   AnimationCallbackEvent,
   booleanAttribute,
   ChangeDetectionStrategy,
@@ -29,74 +28,17 @@ import { NzConfigKey, onConfigChangeEventForComponent, WithConfig } from 'ng-zor
 import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 
+import { AlertIconService, NzAlertType } from './alert-icon.service';
+import { AlertConfigService } from './alert-config.service';
+import { AlertAnimationService } from './alert-animation.service';
+
 const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'alert';
-export type NzAlertType = 'success' | 'info' | 'warning' | 'error';
 
 @Component({
   selector: 'nz-alert',
   exportAs: 'nzAlert',
   imports: [NzIconModule, NzOutletModule, NzNoAnimationDirective],
-  template: `
-    @if (!closed) {
-      <div
-        class="ant-alert"
-        [nzNoAnimation]="nzNoAnimation"
-        [class.ant-alert-rtl]="dir === 'rtl'"
-        [class.ant-alert-success]="nzType === 'success'"
-        [class.ant-alert-info]="nzType === 'info'"
-        [class.ant-alert-warning]="nzType === 'warning'"
-        [class.ant-alert-error]="nzType === 'error'"
-        [class.ant-alert-no-icon]="!nzShowIcon"
-        [class.ant-alert-banner]="nzBanner"
-        [class.ant-alert-closable]="nzCloseable"
-        [class.ant-alert-with-description]="!!nzDescription"
-        (animate.leave)="onLeaveAnimationDone($event)"
-      >
-        @if (nzShowIcon) {
-          <div class="ant-alert-icon">
-            @if (nzIcon) {
-              <ng-container *nzStringTemplateOutlet="nzIcon"></ng-container>
-            } @else {
-              <nz-icon [nzType]="nzIconType || inferredIconType" [nzTheme]="iconTheme" />
-            }
-          </div>
-        }
-
-        @if (nzMessage || nzDescription) {
-          <div class="ant-alert-content">
-            @if (nzMessage) {
-              <span class="ant-alert-message">
-                <ng-container *nzStringTemplateOutlet="nzMessage">{{ nzMessage }}</ng-container>
-              </span>
-            }
-            @if (nzDescription) {
-              <span class="ant-alert-description">
-                <ng-container *nzStringTemplateOutlet="nzDescription">{{ nzDescription }}</ng-container>
-              </span>
-            }
-          </div>
-        }
-
-        @if (nzAction) {
-          <div class="ant-alert-action">
-            <ng-container *nzStringTemplateOutlet="nzAction">{{ nzAction }}</ng-container>
-          </div>
-        }
-
-        @if (nzCloseable || nzCloseText) {
-          <button type="button" tabindex="0" class="ant-alert-close-icon" (click)="closeAlert()">
-            @if (nzCloseText) {
-              <ng-container *nzStringTemplateOutlet="nzCloseText">
-                <span class="ant-alert-close-text">{{ nzCloseText }}</span>
-              </ng-container>
-            } @else {
-              <nz-icon nzType="close" />
-            }
-          </button>
-        }
-      </div>
-    }
-  `,
+  templateUrl: './alert.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None
 })
@@ -104,7 +46,9 @@ export class NzAlertComponent implements OnChanges, OnInit {
   private cdr = inject(ChangeDetectorRef);
   private directionality = inject(Directionality);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly animationType = inject(ANIMATION_MODULE_TYPE, { optional: true });
+  private readonly iconService = inject(AlertIconService);
+  private readonly configService = inject(AlertConfigService);
+  private readonly animationService = inject(AlertAnimationService);
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
   @Input() nzAction: string | TemplateRef<void> | null = null;
@@ -112,7 +56,7 @@ export class NzAlertComponent implements OnChanges, OnInit {
   @Input() nzIconType: string | null = null;
   @Input() nzMessage: string | TemplateRef<void> | null = null;
   @Input() nzDescription: string | TemplateRef<void> | null = null;
-  @Input() nzType: 'success' | 'info' | 'warning' | 'error' = 'info';
+  @Input() nzType: NzAlertType = 'info';
   @Input({ transform: booleanAttribute }) @WithConfig() nzCloseable: boolean = false;
   @Input({ transform: booleanAttribute }) @WithConfig() nzShowIcon: boolean = false;
   @Input({ transform: booleanAttribute }) nzBanner = false;
@@ -131,76 +75,34 @@ export class NzAlertComponent implements OnChanges, OnInit {
   }
 
   ngOnInit(): void {
-    this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((direction: Direction) => {
-      this.dir = direction;
+    this.dir = this.directionality.value;
+    this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((d: Direction) => {
+      this.dir = d;
       this.cdr.detectChanges();
     });
-
-    this.dir = this.directionality.value;
   }
 
   closeAlert(): void {
     this.closed = true;
-    // When animations are disabled, emit immediately since animate.leave won't trigger
-    if (this.nzNoAnimation || this.animationType === 'NoopAnimations') {
-      this.nzOnClose.emit(true);
-    }
+    this.animationService.handleClose(this.nzNoAnimation, this.nzOnClose);
   }
 
   onLeaveAnimationDone(event: AnimationCallbackEvent): void {
-    const element = event.target as HTMLElement;
-
-    // If animations are disabled, complete immediately (nzOnClose already emitted in closeAlert)
-    if (this.nzNoAnimation || this.animationType === 'NoopAnimations') {
-      event.animationComplete();
-      return;
-    }
-
-    // Apply animation classes
-    element.classList.add('ant-alert-motion-leave', 'ant-alert-motion-leave-active');
-
-    // Listen for transition end to complete the animation
-    const onTransitionEnd = (): void => {
-      element.removeEventListener('transitionend', onTransitionEnd);
-      this.nzOnClose.emit(true);
-      event.animationComplete();
-    };
-
-    element.addEventListener('transitionend', onTransitionEnd);
+    this.animationService.handleLeaveAnimation(event, this.nzNoAnimation, this.nzOnClose);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     const { nzShowIcon, nzDescription, nzType, nzBanner } = changes;
-    if (nzShowIcon) {
-      this.isShowIconSet = true;
-    }
+    if (nzShowIcon) this.isShowIconSet = true;
     if (nzType) {
       this.isTypeSet = true;
-      switch (this.nzType) {
-        case 'error':
-          this.inferredIconType = 'close-circle';
-          break;
-        case 'success':
-          this.inferredIconType = 'check-circle';
-          break;
-        case 'info':
-          this.inferredIconType = 'info-circle';
-          break;
-        case 'warning':
-          this.inferredIconType = 'exclamation-circle';
-          break;
-      }
+      this.inferredIconType = this.iconService.getIconType(this.nzType);
     }
-    if (nzDescription) {
-      this.iconTheme = this.nzDescription ? 'outline' : 'fill';
-    }
+    if (nzDescription) this.iconTheme = this.iconService.getIconTheme(!!this.nzDescription);
     if (nzBanner) {
-      if (!this.isTypeSet) {
-        this.nzType = 'warning';
-      }
-      if (!this.isShowIconSet) {
-        this.nzShowIcon = true;
-      }
+      const update = this.configService.handleBannerConfig(this.nzBanner, this.isTypeSet, this.isShowIconSet);
+      if (update.type) this.nzType = update.type;
+      if (update.showIcon) this.nzShowIcon = update.showIcon;
     }
   }
 }

@@ -1,0 +1,59 @@
+@if (!closed) {
+  <div
+    class="ant-alert"
+    [nzNoAnimation]="nzNoAnimation"
+    [class.ant-alert-rtl]="dir === 'rtl'"
+    [class.ant-alert-success]="nzType === 'success'"
+    [class.ant-alert-info]="nzType === 'info'"
+    [class.ant-alert-warning]="nzType === 'warning'"
+    [class.ant-alert-error]="nzType === 'error'"
+    [class.ant-alert-no-icon]="!nzShowIcon"
+    [class.ant-alert-banner]="nzBanner"
+    [class.ant-alert-closable]="nzCloseable"
+    [class.ant-alert-with-description]="!!nzDescription"
+    (animate.leave)="onLeaveAnimationDone($event)"
+  >
+    @if (nzShowIcon) {
+      <div class="ant-alert-icon">
+        @if (nzIcon) {
+          <ng-container *nzStringTemplateOutlet="nzIcon"></ng-container>
+        } @else {
+          <nz-icon [nzType]="nzIconType || inferredIconType" [nzTheme]="iconTheme" />
+        }
+      </div>
+    }
+
+    @if (nzMessage || nzDescription) {
+      <div class="ant-alert-content">
+        @if (nzMessage) {
+          <span class="ant-alert-message">
+            <ng-container *nzStringTemplateOutlet="nzMessage">{{ nzMessage }}</ng-container>
+          </span>
+        }
+        @if (nzDescription) {
+          <span class="ant-alert-description">
+            <ng-container *nzStringTemplateOutlet="nzDescription">{{ nzDescription }}</ng-container>
+          </span>
+        }
+      </div>
+    }
+
+    @if (nzAction) {
+      <div class="ant-alert-action">
+        <ng-container *nzStringTemplateOutlet="nzAction">{{ nzAction }}</ng-container>
+      </div>
+    }
+
+    @if (nzCloseable || nzCloseText) {
+      <button type="button" tabindex="0" class="ant-alert-close-icon" (click)="closeAlert()">
+        @if (nzCloseText) {
+          <ng-container *nzStringTemplateOutlet="nzCloseText">
+            <span class="ant-alert-close-text">{{ nzCloseText }}</span>
+          </ng-container>
+        } @else {
+          <nz-icon nzType="close" />
+        }
+      </button>
+    }
+  </div>
+}

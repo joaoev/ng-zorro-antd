@@ -1,0 +1,13 @@
+@if (visible()) {
+  <nz-float-button
+    #backTop
+    [nzIcon]="nzIcon() || 'vertical-align-top'"
+    [nzDescription]="nzDescription()"
+    [nzHref]="nzHref()"
+    [nzType]="nzType()"
+    [nzShape]="shape()"
+    [nzBadge]="nzBadge()"
+    [animate.enter]="fadeAnimationEnter()"
+    [animate.leave]="fadeAnimationLeave()"
+  />
+}
