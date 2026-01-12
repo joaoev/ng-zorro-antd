@@ -4,7 +4,7 @@
  */
 
 import { Directionality } from '@angular/cdk/bidi';
-import { normalizePassiveListenerOptions, Platform } from '@angular/cdk/platform';
+import { Platform } from '@angular/cdk/platform';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -28,7 +28,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, Subscription } from 'rxjs';
-import { debounceTime, takeUntil } from 'rxjs/operators';
 
 import { withAnimationCheck } from 'ng-zorro-antd/core/animation';
 import { withConfigFactory } from 'ng-zorro-antd/core/config';
@@ -38,31 +37,16 @@ import { fromEventOutsideAngular, generateClassName } from 'ng-zorro-antd/core/u
 
 import { NzFloatButtonComponent } from './float-button.component';
 import { NzFloatButtonBadge, NzFloatButtonType } from './typings';
+import { handleScroll, registerScrollEvent } from './float-button-top-scroll.helper';
 
 const withConfig = withConfigFactory('floatButton');
 const CLASS_NAME = 'ant-float-btn';
-
-const passiveEventListenerOptions = normalizePassiveListenerOptions({ passive: true });
 
 @Component({
   selector: 'nz-float-button-top',
   exportAs: 'nzFloatButtonTop',
   imports: [NzFloatButtonComponent],
-  template: `
-    @if (visible()) {
-      <nz-float-button
-        #backTop
-        [nzIcon]="nzIcon() || 'vertical-align-top'"
-        [nzDescription]="nzDescription()"
-        [nzHref]="nzHref()"
-        [nzType]="nzType()"
-        [nzShape]="shape()"
-        [nzBadge]="nzBadge()"
-        [animate.enter]="fadeAnimationEnter()"
-        [animate.leave]="fadeAnimationLeave()"
-      />
-    }
-  `,
+  templateUrl: './float-button-top.component.html',
   host: {
     '[class]': 'class()'
   },
@@ -98,9 +82,7 @@ export class NzFloatButtonTopComponent implements OnInit {
   protected readonly class = computed<string[]>(() => {
     const dir = this.directionality.valueSignal();
     const classes = [CLASS_NAME, `${CLASS_NAME}-top`, this.generateClass(this.shape())];
-    if (dir === 'rtl') {
-      classes.push(this.generateClass(dir));
-    }
+    if (dir === 'rtl') classes.push(this.generateClass(dir));
     return classes;
   });
 
@@ -116,7 +98,6 @@ export class NzFloatButtonTopComponent implements OnInit {
       this.scrollListenerDestroy$.next();
       this.scrollListenerDestroy$.complete();
     });
-
     effect(() => {
       const target = this.nzTarget();
       if (target) {
@@ -124,7 +105,6 @@ export class NzFloatButtonTopComponent implements OnInit {
         this.registerScrollEvent();
       }
     });
-
     effect(onCleanup => {
       const backTop = this.backTop();
       if (backTop) {
@@ -136,11 +116,8 @@ export class NzFloatButtonTopComponent implements OnInit {
             this.ngZone.run(() => this.nzOnClick.emit(true));
           });
       }
-      return onCleanup(() => {
-        this.backTopClickSubscription.unsubscribe();
-      });
+      return onCleanup(() => this.backTopClickSubscription.unsubscribe());
     });
-
     effect(() => {
       this.visibilityHeight();
       untracked(() => this.handleScroll());
@@ -156,24 +133,23 @@ export class NzFloatButtonTopComponent implements OnInit {
   }
 
   private handleScroll(): void {
-    if (
-      !this.platform.isBrowser ||
-      this.visible() === this.scrollSrv.getScroll(this.getTarget()) > this.visibilityHeight()
-    ) {
-      return;
-    }
-    this.visible.update(v => !v);
+    handleScroll(
+      this.platform,
+      this.scrollSrv,
+      () => this.getTarget(),
+      () => this.visibilityHeight(),
+      this.visible
+    );
   }
 
   private registerScrollEvent(): void {
-    if (!this.platform.isBrowser) {
-      return;
-    }
-    this.scrollListenerDestroy$.next();
-    this.handleScroll();
-    fromEventOutsideAngular(this.getTarget(), 'scroll', passiveEventListenerOptions as AddEventListenerOptions)
-      .pipe(debounceTime(50), takeUntil(this.scrollListenerDestroy$))
-      .subscribe(() => this.handleScroll());
+    registerScrollEvent(
+      this.platform,
+      this.scrollSrv,
+      () => this.getTarget(),
+      this.scrollListenerDestroy$,
+      () => this.handleScroll()
+    );
   }
 
   private generateClass(suffix: string): string {
