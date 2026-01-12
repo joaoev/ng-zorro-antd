@@ -80,3 +80,46 @@ export interface ModalButtonOptions<T = NzSafeAny> {
   onClick?(this: ModalButtonOptions<T>, contentComponentInstance?: T): NzSafeAny | Promise<NzSafeAny>;
   [key: string]: NzSafeAny;
 }
+
+// Interfaces para agrupamento de inputs do componente modal
+export interface ModalMaskOptions {
+  mask?: boolean;
+  maskClosable?: boolean;
+  closeOnNavigation?: boolean;
+  maskStyle?: StyleObjectLike;
+  closable?: boolean;
+  keyboard?: boolean;
+  noAnimation?: boolean;
+  centered?: boolean;
+  draggable?: boolean;
+}
+
+export interface ModalButtonConfigOptions {
+  okLoading?: boolean;
+  okDisabled?: boolean;
+  cancelDisabled?: boolean;
+  cancelLoading?: boolean;
+  okText?: string | null;
+  cancelText?: string | null;
+  okType?: NzButtonType;
+  okDanger?: boolean;
+  autofocus?: 'ok' | 'cancel' | 'auto' | null;
+}
+
+export interface ModalDisplayOptions {
+  width?: number | string;
+  zIndex?: number;
+  wrapClassName?: string;
+  className?: string;
+  style?: object;
+  bodyStyle?: StyleObjectLike;
+  closeIcon?: string | TemplateRef<void>;
+  modalType?: ModalTypes;
+  iconType?: string;
+}
+
+export interface ModalContentOptions {
+  content?: string | TemplateRef<NzSafeAny> | Type<NzSafeAny>;
+  footer?: string | TemplateRef<{}> | Array<ModalButtonOptions<NzSafeAny>> | null;
+  title?: string | TemplateRef<{}>;
+}

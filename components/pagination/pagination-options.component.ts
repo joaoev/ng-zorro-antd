@@ -18,6 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { toNumber } from 'ng-zorro-antd/core/util';
 import { NzPaginationI18nInterface } from 'ng-zorro-antd/i18n';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { PaginationOptionsState, PaginationOptionsDisplay } from './pagination.types';
 
 @Component({
   selector: 'li[nz-pagination-options]',
@@ -50,18 +51,47 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
   imports: [NzSelectModule, FormsModule]
 })
 export class NzPaginationOptionsComponent implements OnChanges {
-  @Input() nzSize: 'default' | 'small' = 'default';
-  @Input() disabled = false;
-  @Input() showSizeChanger = false;
-  @Input() showQuickJumper = false;
+  // Agrupamento de inputs para reduzir o número de propriedades @Input
+  @Input() nzState: PaginationOptionsState = {};
+  @Input() nzOptions: PaginationOptionsDisplay = {};
   @Input() locale!: NzPaginationI18nInterface;
-  @Input() total = 0;
-  @Input() pageIndex = 1;
-  @Input() pageSize = 10;
-  @Input() pageSizeOptions: number[] = [];
+
   @Output() readonly pageIndexChange = new EventEmitter<number>();
   @Output() readonly pageSizeChange = new EventEmitter<number>();
   listOfPageSizeOption: Array<{ value: number; label: string }> = [];
+
+  // Getters para acessar valores individuais com fallback para valores padrão
+  get nzSize(): 'default' | 'small' {
+    return this.nzOptions.size ?? 'default';
+  }
+
+  get disabled(): boolean {
+    return this.nzOptions.disabled ?? false;
+  }
+
+  get showSizeChanger(): boolean {
+    return this.nzOptions.showSizeChanger ?? false;
+  }
+
+  get showQuickJumper(): boolean {
+    return this.nzOptions.showQuickJumper ?? false;
+  }
+
+  get total(): number {
+    return this.nzState.total ?? 0;
+  }
+
+  get pageIndex(): number {
+    return this.nzState.pageIndex ?? 1;
+  }
+
+  get pageSize(): number {
+    return this.nzState.pageSize ?? 10;
+  }
+
+  get pageSizeOptions(): number[] {
+    return this.nzState.pageSizeOptions ?? [];
+  }
 
   onPageSizeChange(size: number): void {
     if (this.pageSize !== size) {
@@ -77,8 +107,8 @@ export class NzPaginationOptionsComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const { pageSize, pageSizeOptions, locale } = changes;
-    if (pageSize || pageSizeOptions || locale) {
+    const { nzState, locale } = changes;
+    if (nzState || locale) {
       this.listOfPageSizeOption = [...new Set([...this.pageSizeOptions, this.pageSize])].map(item => ({
         value: item,
         label: `${item} ${this.locale.items_per_page}`

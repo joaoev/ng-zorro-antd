@@ -40,3 +40,26 @@ export interface NzProgressStepItem {
   width: string;
   height: string;
 }
+
+export interface ProgressState {
+  percent?: number;
+  successPercent?: number;
+  status?: NzProgressStatusType;
+}
+
+export interface ProgressDisplayOptions {
+  showInfo?: boolean;
+  size?: 'default' | 'small';
+  type?: NzProgressTypeType;
+  width?: number;
+  format?: NzProgressFormatter;
+  steps?: number;
+}
+
+export interface ProgressStrokeOptions {
+  strokeColor?: NzProgressStrokeColorType;
+  strokeWidth?: number;
+  strokeLinecap?: NzProgressStrokeLinecapType;
+  gapDegree?: number;
+  gapPosition?: NzProgressGapPositionType;
+}
