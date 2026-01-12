@@ -44,6 +44,7 @@ import {
 } from 'ng-zorro-antd/core/tree';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 
+import { TreeBehaviorOptions, TreeDataOptions, TreeDisplayOptions, TreeStateOptions, TreeTemplateOptions, TreeVirtualScrollOptions } from './tree.types';
 import { NzTreeNodeBuiltinComponent } from './tree-node.component';
 import { NzTreeService } from './tree.service';
 
@@ -190,31 +191,119 @@ export class NzTreeComponent extends NzTreeBase implements OnInit, ControlValueA
   private directionality = inject(Directionality);
   private destroyRef = inject(DestroyRef);
 
-  @Input({ transform: booleanAttribute }) @WithConfig() nzShowIcon: boolean = false;
-  @Input({ transform: booleanAttribute }) @WithConfig() nzHideUnMatched: boolean = false;
-  @Input({ transform: booleanAttribute }) @WithConfig() nzBlockNode: boolean = false;
-  @Input({ transform: booleanAttribute }) nzExpandAll = false;
-  @Input({ transform: booleanAttribute }) nzSelectMode = false;
-  @Input({ transform: booleanAttribute }) nzCheckStrictly = false;
-  @Input({ transform: booleanAttribute }) nzShowExpand: boolean = true;
-  @Input({ transform: booleanAttribute }) nzShowLine = false;
-  @Input({ transform: booleanAttribute }) nzCheckable = false;
-  @Input({ transform: booleanAttribute }) nzAsyncData = false;
-  @Input({ transform: booleanAttribute }) nzDraggable: boolean = false;
-  @Input({ transform: booleanAttribute }) nzMultiple = false;
-  @Input() nzExpandedIcon?: TemplateRef<{ $implicit: NzTreeNode; origin: NzTreeNodeOptions }>;
-  @Input() nzVirtualItemSize = 28;
-  @Input() nzVirtualMaxBufferPx = 500;
-  @Input() nzVirtualMinBufferPx = 28;
-  @Input() nzVirtualHeight: string | null = null;
-  @Input() nzTreeTemplate?: TemplateRef<{ $implicit: NzTreeNode; origin: NzTreeNodeOptions }>;
+  @Input() nzDisplayOptions: TreeDisplayOptions = {};
+  @Input() nzBehaviorOptions: TreeBehaviorOptions = {};
+  @Input() nzVirtualScrollOptions: TreeVirtualScrollOptions = {};
+  @Input() nzTemplateOptions: TreeTemplateOptions = {};
+  @Input() nzStateOptions: TreeStateOptions = {};
+  @Input() nzDataOptions: TreeDataOptions = {};
   @Input() nzBeforeDrop?: (confirm: NzFormatBeforeDropEvent) => Observable<boolean>;
-  @Input() nzData: NzTreeNodeOptions[] | NzTreeNode[] = [];
-  @Input() nzExpandedKeys: NzTreeNodeKey[] = [];
-  @Input() nzSelectedKeys: NzTreeNodeKey[] = [];
-  @Input() nzCheckedKeys: NzTreeNodeKey[] = [];
-  @Input() nzSearchValue: string = '';
-  @Input() nzSearchFunc?: (node: NzTreeNodeOptions) => boolean;
+
+  // Getters para manter compatibilidade com código existente
+  get nzShowIcon(): boolean {
+    if (this.nzDisplayOptions.showIcon !== undefined) {
+      return this.nzDisplayOptions.showIcon;
+    }
+    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzShowIcon ?? false;
+  }
+
+  get nzHideUnMatched(): boolean {
+    if (this.nzDisplayOptions.hideUnMatched !== undefined) {
+      return this.nzDisplayOptions.hideUnMatched;
+    }
+    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzHideUnMatched ?? false;
+  }
+
+  get nzBlockNode(): boolean {
+    if (this.nzDisplayOptions.blockNode !== undefined) {
+      return this.nzDisplayOptions.blockNode;
+    }
+    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.nzBlockNode ?? false;
+  }
+
+  get nzShowExpand(): boolean {
+    return this.nzDisplayOptions.showExpand ?? true;
+  }
+
+  get nzShowLine(): boolean {
+    return this.nzDisplayOptions.showLine ?? false;
+  }
+
+  get nzSelectMode(): boolean {
+    return this.nzDisplayOptions.selectMode ?? false;
+  }
+
+  get nzExpandAll(): boolean {
+    return this.nzBehaviorOptions.expandAll ?? false;
+  }
+
+  get nzCheckStrictly(): boolean {
+    return this.nzBehaviorOptions.checkStrictly ?? false;
+  }
+
+  get nzCheckable(): boolean {
+    return this.nzBehaviorOptions.checkable ?? false;
+  }
+
+  get nzAsyncData(): boolean {
+    return this.nzBehaviorOptions.asyncData ?? false;
+  }
+
+  get nzDraggable(): boolean {
+    return this.nzBehaviorOptions.draggable ?? false;
+  }
+
+  get nzMultiple(): boolean {
+    return this.nzBehaviorOptions.multiple ?? false;
+  }
+
+  get nzExpandedIcon(): TemplateRef<{ $implicit: NzTreeNode; origin: NzTreeNodeOptions }> | undefined {
+    return this.nzTemplateOptions.expandedIcon;
+  }
+
+  get nzTreeTemplate(): TemplateRef<{ $implicit: NzTreeNode; origin: NzTreeNodeOptions }> | undefined {
+    return this.nzTemplateOptions.treeTemplate;
+  }
+
+  get nzVirtualItemSize(): number {
+    return this.nzVirtualScrollOptions.virtualItemSize ?? 28;
+  }
+
+  get nzVirtualMaxBufferPx(): number {
+    return this.nzVirtualScrollOptions.virtualMaxBufferPx ?? 500;
+  }
+
+  get nzVirtualMinBufferPx(): number {
+    return this.nzVirtualScrollOptions.virtualMinBufferPx ?? 28;
+  }
+
+  get nzVirtualHeight(): string | null {
+    return this.nzVirtualScrollOptions.virtualHeight ?? null;
+  }
+
+  get nzData(): NzTreeNodeOptions[] | NzTreeNode[] {
+    return this.nzDataOptions.data ?? [];
+  }
+
+  get nzExpandedKeys(): NzTreeNodeKey[] {
+    return this.nzStateOptions.expandedKeys ?? [];
+  }
+
+  get nzSelectedKeys(): NzTreeNodeKey[] {
+    return this.nzStateOptions.selectedKeys ?? [];
+  }
+
+  get nzCheckedKeys(): NzTreeNodeKey[] {
+    return this.nzStateOptions.checkedKeys ?? [];
+  }
+
+  get nzSearchValue(): string {
+    return this.nzDataOptions.searchValue ?? '';
+  }
+
+  get nzSearchFunc(): ((node: NzTreeNodeOptions) => boolean) | undefined {
+    return this.nzDataOptions.searchFunc;
+  }
   @ContentChild('nzTreeTemplate', { static: true }) nzTreeTemplateChild!: TemplateRef<{
     $implicit: NzTreeNode;
     origin: NzTreeNodeOptions;
@@ -284,55 +373,54 @@ export class NzTreeComponent extends NzTreeBase implements OnInit, ControlValueA
     let useDefaultExpandedKeys = false;
     let expandAll = false;
     const {
-      nzData,
-      nzExpandedKeys,
-      nzSelectedKeys,
-      nzCheckedKeys,
-      nzCheckStrictly,
-      nzExpandAll,
-      nzMultiple,
-      nzSearchValue
+      nzDataOptions,
+      nzStateOptions,
+      nzBehaviorOptions
     } = changes;
 
-    if (nzExpandAll) {
-      useDefaultExpandedKeys = true;
-      expandAll = this.nzExpandAll;
+    if (nzBehaviorOptions) {
+      if (nzBehaviorOptions.previousValue?.expandAll !== nzBehaviorOptions.currentValue?.expandAll) {
+        useDefaultExpandedKeys = true;
+        expandAll = this.nzExpandAll;
+      }
+
+      if (nzBehaviorOptions.previousValue?.multiple !== nzBehaviorOptions.currentValue?.multiple) {
+        this.nzTreeService.isMultiple = this.nzMultiple;
+      }
+
+      if (nzBehaviorOptions.previousValue?.checkStrictly !== nzBehaviorOptions.currentValue?.checkStrictly) {
+        this.nzTreeService.isCheckStrictly = this.nzCheckStrictly;
+        this.handleCheckedKeys(null);
+      }
     }
 
-    if (nzMultiple) {
-      this.nzTreeService.isMultiple = this.nzMultiple;
+    if (nzDataOptions) {
+      if (nzDataOptions.previousValue?.data !== nzDataOptions.currentValue?.data) {
+        this.handleNzData(this.nzData);
+      }
+
+      if (nzDataOptions.previousValue?.searchValue !== nzDataOptions.currentValue?.searchValue) {
+        const searchValue = nzDataOptions.currentValue?.searchValue;
+        if (!(nzDataOptions.firstChange && !searchValue)) {
+          useDefaultExpandedKeys = false;
+          this.handleSearchValue(searchValue, this.nzSearchFunc);
+          this.nzSearchValueChange.emit(this.nzTreeService.formatEvent('search', null, null));
+        }
+      }
     }
 
-    if (nzCheckStrictly) {
-      this.nzTreeService.isCheckStrictly = this.nzCheckStrictly;
-    }
+    if (nzStateOptions) {
+      if (nzStateOptions.previousValue?.checkedKeys !== nzStateOptions.currentValue?.checkedKeys) {
+        this.handleCheckedKeys(this.nzCheckedKeys);
+      }
 
-    if (nzData) {
-      this.handleNzData(this.nzData);
-    }
+      if (nzStateOptions.previousValue?.expandedKeys !== nzStateOptions.currentValue?.expandedKeys || nzBehaviorOptions) {
+        useDefaultExpandedKeys = true;
+        this.handleExpandedKeys(expandAll || this.nzExpandedKeys);
+      }
 
-    if (nzCheckedKeys) {
-      this.handleCheckedKeys(this.nzCheckedKeys);
-    }
-
-    if (nzCheckStrictly) {
-      this.handleCheckedKeys(null);
-    }
-
-    if (nzExpandedKeys || nzExpandAll) {
-      useDefaultExpandedKeys = true;
-      this.handleExpandedKeys(expandAll || this.nzExpandedKeys);
-    }
-
-    if (nzSelectedKeys) {
-      this.handleSelectedKeys(this.nzSelectedKeys, this.nzMultiple);
-    }
-
-    if (nzSearchValue) {
-      if (!(nzSearchValue.firstChange && !this.nzSearchValue)) {
-        useDefaultExpandedKeys = false;
-        this.handleSearchValue(nzSearchValue.currentValue, this.nzSearchFunc);
-        this.nzSearchValueChange.emit(this.nzTreeService.formatEvent('search', null, null));
+      if (nzStateOptions.previousValue?.selectedKeys !== nzStateOptions.currentValue?.selectedKeys) {
+        this.handleSelectedKeys(this.nzSelectedKeys, this.nzMultiple);
       }
     }
 
