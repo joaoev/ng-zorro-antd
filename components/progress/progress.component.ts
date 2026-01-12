@@ -14,16 +14,20 @@ import {
   OnInit,
   SimpleChanges,
   ViewEncapsulation,
-  numberAttribute,
   inject,
   DestroyRef
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { NzConfigKey, NzConfigService, onConfigChangeEventForComponent, ProgressConfig } from 'ng-zorro-antd/core/config';
+import {
+  NzConfigKey,
+  NzConfigService,
+  onConfigChangeEventForComponent,
+  ProgressConfig
+} from 'ng-zorro-antd/core/config';
 import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
 import { NgStyleInterface } from 'ng-zorro-antd/core/types';
-import { isNotNil, numberAttributeWithZeroFallback } from 'ng-zorro-antd/core/util';
+import { isNotNil } from 'ng-zorro-antd/core/util';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 
 import {
@@ -187,7 +191,12 @@ export class NzProgressComponent implements OnChanges, OnInit {
 
   // Getters para acessar valores individuais com fallback para valores padrão e configuração global
   private get config(): ProgressConfig {
-    return this.nzConfigService.getConfigForComponent(this._nzModuleName)?.progress || {};
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    // Faz o type guard para garantir que é ProgressConfig
+    if (config && (config as ProgressConfig).nzSize !== undefined) {
+      return config as ProgressConfig;
+    }
+    return {};
   }
 
   get nzPercent(): number {
@@ -311,7 +320,10 @@ export class NzProgressComponent implements OnChanges, OnInit {
       if (state.percent !== undefined || state.successPercent !== undefined) {
         const fillAll = parseInt(this.nzPercent.toString(), 10) >= 100;
         if (fillAll) {
-          if ((isNotNil(this.nzSuccessPercent) && this.nzSuccessPercent! >= 100) || this.nzSuccessPercent === undefined) {
+          if (
+            (isNotNil(this.nzSuccessPercent) && this.nzSuccessPercent! >= 100) ||
+            this.nzSuccessPercent === undefined
+          ) {
             this.inferredStatus = 'success';
           }
         } else {
@@ -323,7 +335,12 @@ export class NzProgressComponent implements OnChanges, OnInit {
     if (nzState || nzStroke) {
       const state = this.nzState;
       const stroke = this.nzStroke;
-      if (state.status !== undefined || state.percent !== undefined || state.successPercent !== undefined || stroke.strokeColor !== undefined) {
+      if (
+        state.status !== undefined ||
+        state.percent !== undefined ||
+        state.successPercent !== undefined ||
+        stroke.strokeColor !== undefined
+      ) {
         this.updateIcon();
       }
 
@@ -336,8 +353,14 @@ export class NzProgressComponent implements OnChanges, OnInit {
       const state = this.nzState;
       const options = this.nzOptions;
       const stroke = this.nzStroke;
-      if (stroke.gapPosition !== undefined || stroke.strokeLinecap !== undefined || stroke.gapDegree !== undefined || 
-          options.type !== undefined || state.percent !== undefined || stroke.strokeColor !== undefined) {
+      if (
+        stroke.gapPosition !== undefined ||
+        stroke.strokeLinecap !== undefined ||
+        stroke.gapDegree !== undefined ||
+        options.type !== undefined ||
+        state.percent !== undefined ||
+        stroke.strokeColor !== undefined
+      ) {
         this.getCirclePaths();
       }
 
