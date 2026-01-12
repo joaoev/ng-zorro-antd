@@ -63,8 +63,8 @@ export class NzCalendarComponent implements ControlValueAccessor, OnChanges, OnI
   prefixCls: string = 'ant-picker-calendar';
   dir: Direction = 'ltr';
 
-  private onChangeFn = () => {};
-  private onTouchFn = () => {};
+  private onChangeFn: (date: Date) => void = () => {};
+  private onTouchFn: () => void = () => {};
 
   @Input() nzMode: NzCalendarMode = 'month';
   @Input() nzValue?: Date;
