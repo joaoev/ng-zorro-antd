@@ -7,6 +7,7 @@ export * from './autosize.directive';
 export * from './input-addon.directive';
 export * from './input-affix.directive';
 export * from './input-group-slot.component';
+export * from './input-group-suffix-prefix.directive';
 export * from './input-group.component';
 export * from './input-otp.component';
 export * from './input-password.directive';

@@ -4,5 +4,8 @@
  */
 
 export * from './anchor-link.component';
+export * from './anchor-scroll.service';
 export * from './anchor.component';
+export * from './anchor.constants';
 export * from './anchor.module';
+export * from './anchor.types';
