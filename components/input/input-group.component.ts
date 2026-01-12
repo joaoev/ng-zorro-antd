@@ -26,95 +26,29 @@ import {
   booleanAttribute,
   inject
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { merge } from 'rxjs';
-import { distinctUntilChanged, map, mergeMap, startWith, switchMap } from 'rxjs/operators';
 
 import { NzFormItemFeedbackIconComponent, NzFormNoStatusService, NzFormStatusService } from 'ng-zorro-antd/core/form';
 import { NgClassInterface, NzSizeLDSType, NzStatus, NzValidateStatus } from 'ng-zorro-antd/core/types';
-import { getStatusClassNames } from 'ng-zorro-antd/core/util';
 import { NZ_SPACE_COMPACT_ITEM_TYPE, NzSpaceCompactItemDirective } from 'ng-zorro-antd/space';
 
 import { NzInputGroupSlotComponent } from './input-group-slot.component';
 import { NzInputDirective } from './input.directive';
+import { setStatusStyles } from './input-group-status.helper';
+import { setupInputGroupSubscriptions } from './input-group-subscription.helper';
+import { handleInputGroupChanges } from './input-group-changes.helper';
+import { setupInputGroupContentInit } from './input-group-content.helper';
 
-/**
- * @deprecated Will be removed in v22.0.0. This component will be removed along with input-group.
- */
-@Directive({
-  selector: `nz-input-group[nzSuffix], nz-input-group[nzPrefix]`
-})
+@Directive({ selector: `nz-input-group[nzSuffix], nz-input-group[nzPrefix]` })
 export class NzInputGroupWhitSuffixOrPrefixDirective {
   public readonly elementRef = inject(ElementRef);
 }
-
-/**
- * @deprecated Will be removed in v22. It is recommended to use `<nz-input-wrapper>` instead.
- */
 @Component({
   selector: 'nz-input-group',
   exportAs: 'nzInputGroup',
   imports: [NzInputGroupSlotComponent, NgTemplateOutlet, NzFormItemFeedbackIconComponent],
   encapsulation: ViewEncapsulation.None,
   providers: [NzFormNoStatusService, { provide: NZ_SPACE_COMPACT_ITEM_TYPE, useValue: 'input' }],
-  template: `
-    @if (isAddOn) {
-      <span class="ant-input-wrapper ant-input-group">
-        @if (nzAddOnBefore || nzAddOnBeforeIcon) {
-          <span nz-input-group-slot type="addon" [icon]="nzAddOnBeforeIcon" [template]="nzAddOnBefore"></span>
-        }
-
-        @if (isAffix || hasFeedback) {
-          <span
-            class="ant-input-affix-wrapper"
-            [class.ant-input-affix-wrapper-disabled]="disabled"
-            [class.ant-input-affix-wrapper-sm]="isSmall"
-            [class.ant-input-affix-wrapper-lg]="isLarge"
-            [class.ant-input-affix-wrapper-focused]="focused"
-            [class]="affixInGroupStatusCls"
-          >
-            <ng-template [ngTemplateOutlet]="affixTemplate"></ng-template>
-          </span>
-        } @else {
-          <ng-template [ngTemplateOutlet]="contentTemplate" />
-        }
-        @if (nzAddOnAfter || nzAddOnAfterIcon) {
-          <span nz-input-group-slot type="addon" [icon]="nzAddOnAfterIcon" [template]="nzAddOnAfter"></span>
-        }
-      </span>
-    } @else {
-      @if (isAffix) {
-        <ng-template [ngTemplateOutlet]="affixTemplate" />
-      } @else {
-        <ng-template [ngTemplateOutlet]="contentTemplate" />
-      }
-    }
-
-    <!-- affix template -->
-    <ng-template #affixTemplate>
-      @if (nzPrefix || nzPrefixIcon) {
-        <span nz-input-group-slot type="prefix" [icon]="nzPrefixIcon" [template]="nzPrefix"></span>
-      }
-      <ng-template [ngTemplateOutlet]="contentTemplate" />
-      @if (nzSuffix || nzSuffixIcon || isFeedback) {
-        <span nz-input-group-slot type="suffix" [icon]="nzSuffixIcon" [template]="nzSuffix">
-          @if (isFeedback) {
-            <nz-form-item-feedback-icon [status]="status" />
-          }
-        </span>
-      }
-    </ng-template>
-
-    <!-- content template -->
-    <ng-template #contentTemplate>
-      <ng-content></ng-content>
-      @if (!isAddOn && !isAffix && isFeedback) {
-        <span nz-input-group-slot type="suffix">
-          <nz-form-item-feedback-icon [status]="status" />
-        </span>
-      }
-    </ng-template>
-  `,
+  templateUrl: './input-group.component.html',
   host: {
     '[class.ant-input-search-enter-button]': `nzSearch`,
     '[class.ant-input-search]': `nzSearch`,
@@ -148,7 +82,6 @@ export class NzInputGroupComponent implements AfterContentInit, OnChanges, OnIni
   private destroyRef = inject(DestroyRef);
   private nzFormStatusService = inject(NzFormStatusService, { optional: true });
   private nzFormNoStatusService = inject(NzFormNoStatusService, { optional: true });
-
   @ContentChildren(NzInputDirective) listOfNzInputDirective!: QueryList<NzInputDirective>;
   @Input() nzAddOnBeforeIcon?: string | null = null;
   @Input() nzAddOnAfterIcon?: string | null = null;
@@ -169,127 +102,81 @@ export class NzInputGroupComponent implements AfterContentInit, OnChanges, OnIni
   focused = false;
   disabled = false;
   dir: Direction = 'ltr';
-  // status
   prefixCls: string = 'ant-input';
   affixStatusCls: NgClassInterface = {};
   groupStatusCls: NgClassInterface = {};
   affixInGroupStatusCls: NgClassInterface = {};
   status: NzValidateStatus = '';
   hasFeedback: boolean = false;
+  constructor() { this.destroyRef.onDestroy(() => this.focusMonitor.stopMonitoring(this.elementRef)); }
 
-  constructor() {
-    this.destroyRef.onDestroy(() => this.focusMonitor.stopMonitoring(this.elementRef));
-  }
+  updateChildrenInputSize = (): void => {
+    if (this.listOfNzInputDirective) this.listOfNzInputDirective.forEach(item => item['size'].set(this.nzSize));
+  };
 
-  updateChildrenInputSize(): void {
-    if (this.listOfNzInputDirective) {
-      this.listOfNzInputDirective.forEach(item => item['size'].set(this.nzSize));
-    }
-  }
-
-  ngOnInit(): void {
-    this.nzFormStatusService?.formStatusChanges
-      .pipe(
-        distinctUntilChanged((pre, cur) => pre.status === cur.status && pre.hasFeedback === cur.hasFeedback),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(({ status, hasFeedback }) => {
-        this.setStatusStyles(status, hasFeedback);
-      });
-
-    this.focusMonitor
-      .monitor(this.elementRef, true)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(focusOrigin => {
-        this.focused = !!focusOrigin;
-        this.cdr.markForCheck();
-      });
-
-    this.dir = this.directionality.value;
-    this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(direction => {
-      this.dir = direction;
-    });
-  }
-
-  ngAfterContentInit(): void {
+  ngOnInit = (): void => {
+    setupInputGroupSubscriptions(
+      this.listOfNzInputDirective,
+      this.nzFormStatusService,
+      this.focusMonitor,
+      this.elementRef,
+      this.directionality,
+      this.destroyRef,
+      this.cdr,
+      (status, hasFeedback) => this.setStatusStyles(status, hasFeedback),
+      (focused) => this.focused = focused,
+      (disabled) => this.disabled = disabled,
+      (dir) => this.dir = dir
+    );
+  };
+  ngAfterContentInit = (): void => {
     this.updateChildrenInputSize();
-    const listOfInputChange$ = this.listOfNzInputDirective.changes.pipe(startWith(this.listOfNzInputDirective));
-    listOfInputChange$
-      .pipe(
-        switchMap(list => merge(...[listOfInputChange$, ...list.map((input: NzInputDirective) => input.disabled$)])),
-        mergeMap(() => listOfInputChange$),
-        map(list => list.some((input: NzInputDirective) => input.finalDisabled())),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(disabled => {
-        this.disabled = disabled;
-        this.cdr.markForCheck();
-      });
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    const {
-      nzSize,
-      nzSuffix,
-      nzPrefix,
-      nzPrefixIcon,
-      nzSuffixIcon,
-      nzAddOnAfter,
-      nzAddOnBefore,
-      nzAddOnAfterIcon,
-      nzAddOnBeforeIcon,
-      nzStatus
-    } = changes;
-    if (nzSize) {
-      this.updateChildrenInputSize();
-      this.isLarge = this.nzSize === 'large';
-      this.isSmall = this.nzSize === 'small';
-    }
-    if (nzSuffix || nzPrefix || nzPrefixIcon || nzSuffixIcon) {
-      this.isAffix = !!(this.nzSuffix || this.nzPrefix || this.nzPrefixIcon || this.nzSuffixIcon);
-    }
-    if (nzAddOnAfter || nzAddOnBefore || nzAddOnAfterIcon || nzAddOnBeforeIcon) {
-      this.isAddOn = !!(this.nzAddOnAfter || this.nzAddOnBefore || this.nzAddOnAfterIcon || this.nzAddOnBeforeIcon);
-      this.nzFormNoStatusService?.noFormStatus?.next(this.isAddOn);
-    }
-    if (nzStatus) {
-      this.setStatusStyles(this.nzStatus, this.hasFeedback);
-    }
-  }
-
-  private setStatusStyles(status: NzValidateStatus, hasFeedback: boolean): void {
-    // set inner status
-    this.status = status;
-    this.hasFeedback = hasFeedback;
-    this.isFeedback = !!status && hasFeedback;
-    const baseAffix = !!(this.nzSuffix || this.nzPrefix || this.nzPrefixIcon || this.nzSuffixIcon);
-    this.isAffix = baseAffix || (!this.isAddOn && hasFeedback);
-    this.affixInGroupStatusCls =
-      this.isAffix || this.isFeedback
-        ? (this.affixStatusCls = getStatusClassNames(`${this.prefixCls}-affix-wrapper`, status, hasFeedback))
-        : {};
+    setupInputGroupContentInit(this.listOfNzInputDirective, this.destroyRef, this.cdr, (disabled) => this.disabled = disabled);
+  };
+  ngOnChanges = (changes: SimpleChanges): void => {
+    const result = handleInputGroupChanges(
+      changes,
+      this.nzSize,
+      this.nzSuffix,
+      this.nzPrefix,
+      this.nzPrefixIcon,
+      this.nzSuffixIcon,
+      this.nzAddOnAfter,
+      this.nzAddOnBefore,
+      this.nzAddOnAfterIcon,
+      this.nzAddOnBeforeIcon,
+      this.nzStatus,
+      this.listOfNzInputDirective,
+      this.nzFormNoStatusService,
+      (status, hasFeedback) => this.setStatusStyles(status, hasFeedback),
+      this.hasFeedback
+    );
+    if (changes['nzSize']) this.updateChildrenInputSize();
+    this.isLarge = result.isLarge;
+    this.isSmall = result.isSmall;
+    if (changes['nzSuffix'] || changes['nzPrefix'] || changes['nzPrefixIcon'] || changes['nzSuffixIcon']) this.isAffix = result.isAffix;
+    if (changes['nzAddOnAfter'] || changes['nzAddOnBefore'] || changes['nzAddOnAfterIcon'] || changes['nzAddOnBeforeIcon']) this.isAddOn = result.isAddOn;
+  };
+  private setStatusStyles = (status: NzValidateStatus, hasFeedback: boolean): void => {
+    const result = setStatusStyles(
+      status,
+      hasFeedback,
+      this.nzSuffix,
+      this.nzPrefix,
+      this.nzPrefixIcon,
+      this.nzSuffixIcon,
+      this.isAddOn,
+      this.prefixCls,
+      this.renderer,
+      this.elementRef
+    );
+    this.status = result.status;
+    this.hasFeedback = result.hasFeedback;
+    this.isFeedback = result.isFeedback;
+    this.isAffix = result.isAffix;
+    this.affixInGroupStatusCls = result.affixInGroupStatusCls;
+    this.affixStatusCls = result.affixStatusCls;
+    this.groupStatusCls = result.groupStatusCls;
     this.cdr.markForCheck();
-    // render status if nzStatus is set
-    this.affixStatusCls = getStatusClassNames(
-      `${this.prefixCls}-affix-wrapper`,
-      this.isAddOn ? '' : status,
-      this.isAddOn ? false : hasFeedback
-    );
-    this.groupStatusCls = getStatusClassNames(
-      `${this.prefixCls}-group-wrapper`,
-      this.isAddOn ? status : '',
-      this.isAddOn ? hasFeedback : false
-    );
-    const statusCls = {
-      ...this.affixStatusCls,
-      ...this.groupStatusCls
-    };
-    Object.keys(statusCls).forEach(status => {
-      if (statusCls[status]) {
-        this.renderer.addClass(this.elementRef.nativeElement, status);
-      } else {
-        this.renderer.removeClass(this.elementRef.nativeElement, status);
-      }
-    });
-  }
+  };
 }
