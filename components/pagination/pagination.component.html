@@ -1,1 +1,32 @@
-@if (showPagination) {@if (nzSimple) {<ng-template [ngTemplateOutlet]="simplePagination.template" />} @else {<ng-template [ngTemplateOutlet]="defaultPagination.template" />}}<nz-pagination-simple #simplePagination [disabled]="nzDisabled" [itemRender]="nzItemRender" [locale]="locale" [pageSize]="nzPageSize" [total]="nzTotal" [pageIndex]="nzPageIndex" (pageIndexChange)="onPageIndexChange($event)" /><nz-pagination-default #defaultPagination [nzSize]="size" [itemRender]="nzItemRender" [showTotal]="nzShowTotal" [disabled]="nzDisabled" [locale]="locale" [showSizeChanger]="nzShowSizeChanger" [showQuickJumper]="nzShowQuickJumper" [total]="nzTotal" [pageIndex]="nzPageIndex" [pageSize]="nzPageSize" [pageSizeOptions]="nzPageSizeOptions" (pageIndexChange)="onPageIndexChange($event)" (pageSizeChange)="onPageSizeChange($event)" />
+@if (showPagination) {
+  @if (nzSimple) {
+    <ng-template [ngTemplateOutlet]="simplePagination.template" />
+  } @else {
+    <ng-template [ngTemplateOutlet]="defaultPagination.template" />
+  }
+}
+<nz-pagination-simple
+  #simplePagination
+  [disabled]="nzDisabled"
+  [itemRender]="nzItemRender"
+  [locale]="locale"
+  [pageSize]="nzPageSize"
+  [total]="nzTotal"
+  [pageIndex]="nzPageIndex"
+  (pageIndexChange)="onPageIndexChange($event)"
+/><nz-pagination-default
+  #defaultPagination
+  [nzSize]="size"
+  [itemRender]="nzItemRender"
+  [showTotal]="nzShowTotal"
+  [disabled]="nzDisabled"
+  [locale]="locale"
+  [showSizeChanger]="nzShowSizeChanger"
+  [showQuickJumper]="nzShowQuickJumper"
+  [total]="nzTotal"
+  [pageIndex]="nzPageIndex"
+  [pageSize]="nzPageSize"
+  [pageSizeOptions]="nzPageSizeOptions"
+  (pageIndexChange)="onPageIndexChange($event)"
+  (pageSizeChange)="onPageSizeChange($event)"
+/>

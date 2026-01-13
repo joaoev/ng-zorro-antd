@@ -11,7 +11,6 @@ import {
   DestroyRef,
   DOCUMENT,
   effect,
-  ElementRef,
   inject,
   Input,
   OnChanges,
@@ -25,21 +24,18 @@ import { NzConfigKey, WithConfig } from 'ng-zorro-antd/core/config';
 import { NzScrollService } from 'ng-zorro-antd/core/services';
 import { numberAttributeWithZeroFallback } from 'ng-zorro-antd/core/util';
 
-import { AffixRespondEvents } from './respond-events';
+import { NzAffixDomHandlerDirective } from './affix-dom-handler.directive';
+import { AffixListenerService } from './affix-listener.service';
 import { AffixPositionService, PositionCalculationResult } from './affix-position.service';
 import { AffixStyleService } from './affix-style.service';
-import { AffixListenerService } from './affix-listener.service';
+import { AffixRespondEvents } from './respond-events';
 
 const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'affix';
 
 @Component({
   selector: 'nz-affix',
   exportAs: 'nzAffix',
-  template: `
-    <div #fixedEl>
-      <ng-content></ng-content>
-    </div>
-  `,
+  template: './affix.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None
 })
@@ -49,14 +45,16 @@ export class NzAffixComponent implements OnChanges {
   private readonly directionality = inject(Directionality);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
-  private readonly placeholderNode: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
+  @ViewChild('placeholder', { static: true, read: NzAffixDomHandlerDirective })
+  private readonly placeholderRef!: NzAffixDomHandlerDirective;
   private readonly positionService = inject(AffixPositionService);
   private readonly styleService = inject(AffixStyleService);
   private readonly listenerService = inject(AffixListenerService);
 
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
-  @ViewChild('fixedEl', { static: true }) private readonly fixedEl!: ElementRef<HTMLDivElement>;
+  @ViewChild('fixedEl', { static: true, read: NzAffixDomHandlerDirective })
+  private readonly fixedEl!: NzAffixDomHandlerDirective;
 
   @Input() nzTarget?: string | Element | Window;
 
@@ -103,11 +101,7 @@ export class NzAffixComponent implements OnChanges {
   }
 
   private registerListeners(): void {
-    this.listenerService.registerListeners(
-      this.target,
-      this.destroyRef,
-      (e: Event) => this.updatePosition(e)
-    );
+    this.listenerService.registerListeners(this.target, this.destroyRef, (e: Event) => this.updatePosition(e));
   }
 
   updatePosition(e: Event): void {
@@ -125,10 +119,12 @@ export class NzAffixComponent implements OnChanges {
 
   private calculatePosition(e: Event): PositionCalculationResult {
     const targetNode = this.target;
+    const placeholder = this.placeholderRef.getParams();
+    const fixed = this.fixedEl.getParams();
     const params = {
       target: targetNode,
-      placeholderNode: this.placeholderNode,
-      fixedNode: this.fixedEl.nativeElement,
+      placeholderNode: placeholder.node,
+      fixedNode: fixed.node,
       offsetTop: this.nzOffsetTop,
       offsetBottom: this.nzOffsetBottom,
       scrollTop: this.scrollSrv.getScroll(targetNode, true)
@@ -138,10 +134,10 @@ export class NzAffixComponent implements OnChanges {
       e.type === AffixRespondEvents.resize &&
       !result.affixStyle &&
       this.styleService.getAffixStyle()?.position === 'fixed' &&
-      this.placeholderNode.offsetWidth
+      placeholder.width
     ) {
       result = {
-        affixStyle: { ...this.styleService.getAffixStyle()!, width: this.placeholderNode.offsetWidth },
+        affixStyle: { ...this.styleService.getAffixStyle()!, width: placeholder.width },
         placeholderStyle: result.placeholderStyle
       };
     }
@@ -149,24 +145,26 @@ export class NzAffixComponent implements OnChanges {
   }
 
   private applyStyles(result: PositionCalculationResult, e: Event): void {
-    const fixedNode = this.fixedEl.nativeElement;
+    const fixedNode = this.fixedEl.getParams().node;
+    const placeholderNode = this.placeholderRef.getParams().node;
     const isWindowTarget = this.target === window;
     const styleChanged = this.styleService.setAffixStyle(fixedNode, e, result.affixStyle, isWindowTarget);
     if (styleChanged) {
       this.nzChange.emit(!!result.affixStyle);
     }
-    this.styleService.setPlaceholderStyle(this.placeholderNode, result.placeholderStyle);
+    this.styleService.setPlaceholderStyle(placeholderNode, result.placeholderStyle);
   }
 
   private handleResize(e: Event): void {
-    const fixedNode = this.fixedEl.nativeElement;
-    const syncedStyle = this.styleService.syncPlaceholderStyle(this.placeholderNode, fixedNode, e);
+    const fixed = this.fixedEl.getParams();
+    const placeholder = this.placeholderRef.getParams();
+    const syncedStyle = this.styleService.syncPlaceholderStyle(placeholder.node, fixed.node, e);
     if (syncedStyle) {
       const isWindowTarget = this.target === window;
-      this.styleService.setAffixStyle(fixedNode, e, syncedStyle, isWindowTarget);
-      this.styleService.setPlaceholderStyle(this.placeholderNode, {
-        width: this.placeholderNode.offsetWidth,
-        height: fixedNode.offsetHeight
+      this.styleService.setAffixStyle(fixed.node, e, syncedStyle, isWindowTarget);
+      this.styleService.setPlaceholderStyle(placeholder.node, {
+        width: placeholder.width,
+        height: fixed.height
       });
     }
   }
