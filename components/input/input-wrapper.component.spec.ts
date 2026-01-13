@@ -230,7 +230,7 @@ class InputAllowClearTestComponent {
 @Component({
   imports: [NzInputModule],
   template: `
-    <nz-input-wrapper #withPropAffixes nzPrefix="Prefix" nzSuffix="Suffix">
+    <nz-input-wrapper #withPropAffixes nzPrefix="Prefix" nzSuffixWrapper="Suffix">
       <input nz-input [nzSize]="size" [nzVariant]="variant" [disabled]="disabled" [readonly]="readonly" />
     </nz-input-wrapper>
 
@@ -250,7 +250,13 @@ class InputAllowClearTestComponent {
       <span nzInputAddonAfter>After</span>
     </nz-input-wrapper>
 
-    <nz-input-wrapper #withPropMix nzAddonBefore="Before" nzAddonAfter="After" nzPrefix="Prefix" nzSuffix="Suffix">
+    <nz-input-wrapper
+      #withPropMix
+      nzAddonBefore="Before"
+      nzAddonAfter="After"
+      nzPrefix="Prefix"
+      nzSuffixWrapper="Suffix"
+    >
       <input nz-input [nzSize]="size" [nzVariant]="variant" [disabled]="disabled" [readonly]="readonly" />
     </nz-input-wrapper>
 

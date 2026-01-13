@@ -25,11 +25,27 @@ export function execTask(binPath: string, args: string[], env = {}): TaskFunctio
     (process.stderr as any)._handle.setBlocking(true);
 
     const bin = platform() === 'win32' && binPath === 'ng' ? `${binPath}.cmd` : binPath;
-    const childProcess = spawn(bin, args, {
+
+    const baseOptions = {
       env: { ...process.env, ...env },
       cwd: process.cwd(),
-      stdio: 'inherit'
-    });
+      stdio: 'inherit' as const
+    };
+
+    let childProcess;
+
+    try {
+      childProcess = spawn(bin, args, baseOptions);
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+
+      if (platform() === 'win32' && err.code === 'EINVAL') {
+        childProcess = spawn(bin, args, { ...baseOptions, shell: true });
+      } else {
+        done(err);
+        return;
+      }
+    }
 
     childProcess.on('close', (code: number) => {
       code !== 0 ? done(new Error(`Process failed with code ${code}`)) : done();

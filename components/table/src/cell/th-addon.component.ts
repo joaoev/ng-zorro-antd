@@ -19,7 +19,6 @@ import {
   SimpleChange,
   SimpleChanges,
   ViewEncapsulation,
-  booleanAttribute,
   inject,
   DestroyRef
 } from '@angular/core';
@@ -27,9 +26,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
-import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/config';
+import { NzConfigKey, NzConfigService } from 'ng-zorro-antd/core/config';
 import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 
+import { ThAddonFilterOptions, ThAddonSortOptions } from './th-addon.types';
 import { NzTableFilterComponent } from '../addon/filter.component';
 import { NzTableSortersComponent } from '../addon/sorters.component';
 import {
@@ -101,17 +101,59 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
   private sortOrderChange$ = new Subject<NzTableSortOrder>();
   private isNzShowSortChanged = false;
   private isNzShowFilterChanged = false;
+  private _nzShowSort?: boolean;
+  private _nzShowFilter?: boolean;
   @Input() nzColumnKey?: string;
-  @Input() nzFilterMultiple = true;
-  @Input() nzSortOrder: NzTableSortOrder = null;
-  @Input() nzSortPriority: number | boolean = false;
-  @Input() @WithConfig() nzSortDirections: NzTableSortOrder[] = ['ascend', 'descend', null];
-  @Input() nzFilters: NzTableFilterList = [];
-  @Input() nzSortFn: NzTableSortFn<T> | boolean | null = null;
-  @Input() nzFilterFn: NzTableFilterFn<T> | boolean | null = null;
-  @Input({ transform: booleanAttribute }) nzShowSort = false;
-  @Input({ transform: booleanAttribute }) nzShowFilter = false;
-  @Input({ transform: booleanAttribute }) nzCustomFilter = false;
+  @Input() nzSortOptions: ThAddonSortOptions = {};
+  @Input() nzFilterOptions: ThAddonFilterOptions = {};
+
+  // Getters para manter compatibilidade com código existente
+  get nzSortOrder(): NzTableSortOrder {
+    return this.nzSortOptions.sortOrder ?? null;
+  }
+
+  get nzSortPriority(): number | boolean {
+    return this.nzSortOptions.sortPriority ?? false;
+  }
+
+  get nzSortDirections(): NzTableSortOrder[] {
+    if (this.nzSortOptions.sortDirections !== undefined) {
+      return this.nzSortOptions.sortDirections;
+    }
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && Array.isArray((config as unknown as { nzSortDirections?: NzTableSortOrder[] }).nzSortDirections)) {
+      return (config as unknown as { nzSortDirections?: NzTableSortOrder[] }).nzSortDirections!;
+    }
+    return ['ascend', 'descend', null];
+  }
+
+  get nzSortFn(): NzTableSortFn<T> | boolean | null {
+    return this.nzSortOptions.sortFn ?? null;
+  }
+
+  get nzShowSort(): boolean {
+    return !!(this._nzShowSort ?? this.nzSortOptions.showSort);
+  }
+
+  get nzFilters(): NzTableFilterList {
+    return this.nzFilterOptions.filters ?? [];
+  }
+
+  get nzFilterFn(): NzTableFilterFn<T> | boolean | null {
+    return this.nzFilterOptions.filterFn ?? null;
+  }
+
+  get nzFilterMultiple(): boolean {
+    return this.nzFilterOptions.filterMultiple !== undefined ? this.nzFilterOptions.filterMultiple : true;
+  }
+
+  get nzShowFilter(): boolean {
+    return !!(this._nzShowFilter ?? this.nzFilterOptions.showFilter);
+  }
+
+  get nzCustomFilter(): boolean {
+    return !!this.nzFilterOptions.customFilter;
+  }
   @Output() readonly nzCheckedChange = new EventEmitter<boolean>();
   @Output() readonly nzSortOrderChange = new EventEmitter<string | null>();
   @Output() readonly nzFilterChange = new EventEmitter<NzTableFilterValue>();
@@ -170,46 +212,81 @@ export class NzThAddOnComponent<T> implements OnChanges, OnInit {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const {
-      nzSortDirections,
-      nzFilters,
-      nzSortOrder,
-      nzSortFn,
-      nzFilterFn,
-      nzSortPriority,
-      nzFilterMultiple,
-      nzShowSort,
-      nzShowFilter
-    } = changes;
-    if (nzSortDirections) {
-      if (this.nzSortDirections && this.nzSortDirections.length) {
+    const { nzSortOptions, nzFilterOptions } = changes;
+
+    if (nzSortOptions) {
+      const current = nzSortOptions.currentValue as ThAddonSortOptions | undefined;
+      const previous = nzSortOptions.previousValue as ThAddonSortOptions | undefined;
+
+      if (current?.sortDirections && current.sortDirections.length) {
+        this.sortDirections = current.sortDirections;
+      } else if (
+        previous?.sortDirections !== current?.sortDirections &&
+        this.nzSortDirections &&
+        this.nzSortDirections.length
+      ) {
         this.sortDirections = this.nzSortDirections;
       }
+
+      if (current?.sortOrder !== previous?.sortOrder && current?.sortOrder !== undefined) {
+        this.sortOrder = this.nzSortOrder;
+        this.setSortOrder(this.nzSortOrder);
+      }
+
+      if (current?.showSort !== previous?.showSort) {
+        this.isNzShowSortChanged = true;
+        if (current?.showSort !== undefined) {
+          this._nzShowSort = current.showSort;
+        }
+      }
+
+      const isFirstChange = (change: SimpleChange | undefined): boolean =>
+        !!(change && change.firstChange && change.currentValue !== undefined);
+
+      if (!this.isNzShowSortChanged && isFirstChange(nzSortOptions)) {
+        if (current?.sortOrder !== undefined || current?.sortFn !== undefined) {
+          this._nzShowSort = true;
+        }
+      }
     }
-    if (nzSortOrder) {
-      this.sortOrder = this.nzSortOrder;
-      this.setSortOrder(this.nzSortOrder);
+
+    if (nzFilterOptions) {
+      const current = nzFilterOptions.currentValue as ThAddonFilterOptions | undefined;
+      const previous = nzFilterOptions.previousValue as ThAddonFilterOptions | undefined;
+
+      if (current?.showFilter !== previous?.showFilter) {
+        this.isNzShowFilterChanged = true;
+        if (current?.showFilter !== undefined) {
+          this._nzShowFilter = current.showFilter;
+        }
+      }
+
+      const isFirstChange = (change: SimpleChange | undefined): boolean =>
+        !!(change && change.firstChange && change.currentValue !== undefined);
+
+      if (!this.isNzShowFilterChanged && isFirstChange(nzFilterOptions)) {
+        if (current?.filters !== undefined) {
+          this._nzShowFilter = true;
+        }
+      }
+
+      if ((current?.filters || current?.filterMultiple !== undefined) && this.nzShowFilter) {
+        const listOfValue = this.nzFilters.filter(item => item.byDefault).map(item => item.value);
+        this.nzFilterValue = this.nzFilterMultiple ? listOfValue : listOfValue[0] || null;
+      }
     }
-    if (nzShowSort) {
-      this.isNzShowSortChanged = true;
-    }
-    if (nzShowFilter) {
-      this.isNzShowFilterChanged = true;
-    }
-    const isFirstChange = (value: SimpleChange): boolean =>
-      value && value.firstChange && value.currentValue !== undefined;
-    if ((isFirstChange(nzSortOrder) || isFirstChange(nzSortFn)) && !this.isNzShowSortChanged) {
-      this.nzShowSort = true;
-    }
-    if (isFirstChange(nzFilters) && !this.isNzShowFilterChanged) {
-      this.nzShowFilter = true;
-    }
-    if ((nzFilters || nzFilterMultiple) && this.nzShowFilter) {
-      const listOfValue = this.nzFilters.filter(item => item.byDefault).map(item => item.value);
-      this.nzFilterValue = this.nzFilterMultiple ? listOfValue : listOfValue[0] || null;
-    }
-    if (nzSortFn || nzFilterFn || nzSortPriority || nzFilters) {
-      this.updateCalcOperator();
+
+    if (nzSortOptions || nzFilterOptions) {
+      const currentSort = nzSortOptions?.currentValue as ThAddonSortOptions | undefined;
+      const currentFilter = nzFilterOptions?.currentValue as ThAddonFilterOptions | undefined;
+      if (
+        currentSort?.sortFn ||
+        currentFilter?.filterFn ||
+        currentSort?.sortPriority !== undefined ||
+        currentFilter?.filters
+      ) {
+        this.updateCalcOperator();
+      }
     }
   }
 }

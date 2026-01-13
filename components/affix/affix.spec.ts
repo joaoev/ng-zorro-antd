@@ -304,7 +304,7 @@ describe('affix', () => {
     scrolls: Record<string, Scroll>;
 
     constructor() {
-      spyOn(component, 'getOffset').and.callFake(this.getOffset.bind(this));
+      spyOn(component as NzSafeAny, 'getOffset').and.callFake(this.getOffset.bind(this));
       spyOn(scrollService, 'getScroll').and.callFake(this.getScroll.bind(this));
       this.offsets = { undefined: { top: 10, left: 0, height: 0, width: 0 } };
       this.scrolls = { undefined: { top: 10, left: 0 } };
@@ -448,9 +448,9 @@ describe('NzAffixComponent', () => {
 
     await fixture.whenStable();
 
-    expect(component['removeListeners']).toHaveBeenCalled();
-    expect(component['positionChangeSubscription']).toBeDefined();
-    expect(component['timeout']).toBeDefined();
+    expect((component as NzSafeAny)['removeListeners']).toHaveBeenCalled();
+    expect((component as NzSafeAny)['positionChangeSubscription']).toBeDefined();
+    expect((component as NzSafeAny)['timeout']).toBeDefined();
   });
 
   it('should not register listeners if platform is not browser', async () => {
@@ -458,13 +458,13 @@ describe('NzAffixComponent', () => {
 
     await fixture.whenStable();
 
-    expect(component['positionChangeSubscription']).toEqual(Subscription.EMPTY);
+    expect((component as NzSafeAny)['positionChangeSubscription']).toEqual(Subscription.EMPTY);
   });
 
   it('should remove listeners on destroy', () => {
     spyOn(component as NzSafeAny, 'removeListeners');
     fixture.destroy();
-    expect(component['removeListeners']).toHaveBeenCalled();
+    expect((component as NzSafeAny)['removeListeners']).toHaveBeenCalled();
   });
 
   it('should update position correctly', () => {
@@ -474,31 +474,31 @@ describe('NzAffixComponent', () => {
     const event = new Event('scroll');
     component.updatePosition(event);
 
-    expect(component['setAffixStyle']).toHaveBeenCalled();
-    expect(component['setPlaceholderStyle']).toHaveBeenCalled();
+    expect((component as NzSafeAny)['setAffixStyle']).toHaveBeenCalled();
+    expect((component as NzSafeAny)['setPlaceholderStyle']).toHaveBeenCalled();
   });
 
   it('should update RTL class when direction changes', () => {
     const fixedEl = component['fixedEl'].nativeElement;
     fixedEl.classList.add('ant-affix');
-    component['updateRtlClass']();
+    (component as NzSafeAny)['updateRtlClass']();
 
     expect(fixedEl.classList.contains('ant-affix-rtl')).toBeFalse();
 
     mockDirectionality.valueSignal.set('rtl');
-    component['updateRtlClass']();
+    (component as NzSafeAny)['updateRtlClass']();
 
     expect(fixedEl.classList.contains('ant-affix-rtl')).toBeTrue();
 
     mockDirectionality.valueSignal.set('ltr');
-    component['updateRtlClass']();
+    (component as NzSafeAny)['updateRtlClass']();
 
     expect(fixedEl.classList.contains('ant-affix-rtl')).toBeFalse();
 
     mockDirectionality.valueSignal.set('rtl');
     fixedEl.classList.remove('ant-affix');
     fixedEl.classList.add('ant-affix-rtl');
-    component['updateRtlClass']();
+    (component as NzSafeAny)['updateRtlClass']();
 
     expect(component['fixedEl'].nativeElement.classList.contains('ant-affix-rtl')).toBeFalse();
   });
@@ -509,12 +509,12 @@ describe('NzAffixComponent', () => {
 
     component.updatePosition(new Event('scroll'));
 
-    expect(component['getOffset']).not.toHaveBeenCalled();
+    expect((component as NzSafeAny)['getOffset']).not.toHaveBeenCalled();
   });
 
   it('should update affixStyle with new width on resize event', () => {
     mockPlatform.isBrowser = true;
-    spyOn(component, 'getOffset').and.returnValue({
+    spyOn(component as NzSafeAny, 'getOffset').and.returnValue({
       top: 0,
       left: 0,
       width: 100,
@@ -526,7 +526,7 @@ describe('NzAffixComponent', () => {
 
     component.updatePosition(new Event('resize'));
 
-    expect(component['setAffixStyle']).toHaveBeenCalledWith(
+    expect((component as NzSafeAny)['setAffixStyle']).toHaveBeenCalledWith(
       jasmine.any(Event),
       jasmine.objectContaining({ width: 100 })
     );
@@ -536,14 +536,14 @@ describe('NzAffixComponent', () => {
     spyOn<NzSafeAny>(component, 'setAffixStyle');
 
     const scrollTop = 40;
-    spyOn(component['scrollSrv'], 'getScroll').and.returnValue(scrollTop);
+    spyOn((component as NzSafeAny)['scrollSrv'], 'getScroll').and.returnValue(scrollTop);
     const elemOffset = { top: 200, left: 0, width: 200, height: 50 };
-    spyOn(component, 'getOffset').and.returnValue(elemOffset);
+    spyOn(component as NzSafeAny, 'getOffset').and.returnValue(elemOffset);
     component['nzOffsetTop'] = 150;
     component['nzOffsetBottom'] = 50;
     spyOnProperty(component['placeholderNode'], 'offsetWidth').and.returnValue(120);
 
-    component['affixStyle'] = {
+    (component as NzSafeAny)['affixStyle'] = {
       position: 'fixed',
       top: '10px',
       left: '10px',
@@ -553,7 +553,7 @@ describe('NzAffixComponent', () => {
     const mockEvent = new Event('resize');
     component.updatePosition(mockEvent);
 
-    expect(component['setAffixStyle']).toHaveBeenCalledWith(mockEvent, {
+    expect((component as NzSafeAny)['setAffixStyle']).toHaveBeenCalledWith(mockEvent, {
       position: 'fixed',
       top: '10px',
       left: '10px',

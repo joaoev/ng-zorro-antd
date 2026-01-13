@@ -24,6 +24,7 @@ import { numberAttributeWithZeroFallback } from 'ng-zorro-antd/core/util';
 import { NzTooltipDirective, NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
 import { NzSliderShowTooltip } from './typings';
+import { HandlePositionOptions, HandleStateOptions, HandleTooltipOptions } from './handle.types';
 
 @Component({
   selector: 'nz-slider-handle',
@@ -55,42 +56,93 @@ export class NzSliderHandleComponent implements OnChanges {
   @ViewChild('handle', { static: false }) handleEl?: ElementRef;
   @ViewChild(NzTooltipDirective, { static: false }) tooltip?: NzTooltipDirective;
 
-  @Input({ transform: booleanAttribute }) vertical?: boolean;
-  @Input({ transform: booleanAttribute }) reverse?: boolean;
-  @Input({ transform: numberAttributeWithZeroFallback }) offset?: number;
-  @Input({ transform: numberAttributeWithZeroFallback }) value?: number;
-  @Input() tooltipVisible: NzSliderShowTooltip = 'default';
-  @Input() tooltipPlacement?: string;
-  @Input() tooltipFormatter?: null | ((value: number) => string) | TemplateRef<void>;
-  @Input({ transform: booleanAttribute }) active = false;
-  @Input() dir: Direction = 'ltr';
-  @Input() dragging?: boolean;
+  @Input() nzPositionOptions: HandlePositionOptions = {};
+  @Input() nzTooltipOptions: HandleTooltipOptions = { tooltipVisible: 'default' };
+  @Input() nzStateOptions: HandleStateOptions = { active: false };
+
+  // Getters para manter compatibilidade com código existente
+  get vertical(): boolean {
+    return this.nzPositionOptions.vertical ?? false;
+  }
+
+  get reverse(): boolean {
+    return this.nzPositionOptions.reverse ?? false;
+  }
+
+  get offset(): number {
+    return this.nzPositionOptions.offset ?? 0;
+  }
+
+  get value(): number {
+    return this.nzPositionOptions.value ?? 0;
+  }
+
+  get dir(): Direction {
+    return this.nzPositionOptions.dir ?? 'ltr';
+  }
+
+  get tooltipVisible(): NzSliderShowTooltip {
+    return this.nzTooltipOptions.tooltipVisible ?? 'default';
+  }
+
+  get tooltipPlacement(): string | undefined {
+    return this.nzTooltipOptions.tooltipPlacement;
+  }
+
+  get tooltipFormatter(): null | ((value: number) => string) | TemplateRef<void> | undefined {
+    return this.nzTooltipOptions.tooltipFormatter;
+  }
+
+  get active(): boolean {
+    return this.nzStateOptions.active ?? false;
+  }
+
+  get dragging(): boolean | undefined {
+    return this.nzStateOptions.dragging;
+  }
 
   tooltipTitle?: NzTSType;
   style: NgStyleInterface = {};
 
   ngOnChanges(changes: SimpleChanges): void {
-    const { offset, value, active, tooltipVisible, reverse, dir } = changes;
+    const { nzPositionOptions, nzTooltipOptions, nzStateOptions } = changes;
 
-    if (offset || reverse || dir) {
-      this.updateStyle();
-    }
+    if (nzPositionOptions) {
+      const current = nzPositionOptions.currentValue as HandlePositionOptions | undefined;
+      const previous = nzPositionOptions.previousValue as HandlePositionOptions | undefined;
 
-    if (value) {
-      this.updateTooltipTitle();
-      this.updateTooltipPosition();
-    }
+      if (
+        current?.offset !== previous?.offset ||
+        current?.reverse !== previous?.reverse ||
+        current?.dir !== previous?.dir
+      ) {
+        this.updateStyle();
+      }
 
-    if (active) {
-      if (active.currentValue) {
-        this.toggleTooltip(true);
-      } else {
-        this.toggleTooltip(false);
+      if (current?.value !== previous?.value && current?.value !== undefined) {
+        this.updateTooltipTitle();
+        this.updateTooltipPosition();
       }
     }
 
-    if (tooltipVisible?.currentValue === 'always') {
-      Promise.resolve().then(() => this.toggleTooltip(true, true));
+    if (nzStateOptions) {
+      const current = nzStateOptions.currentValue as HandleStateOptions | undefined;
+      const previous = nzStateOptions.previousValue as HandleStateOptions | undefined;
+
+      if (current?.active !== previous?.active && current?.active !== undefined) {
+        if (current.active) {
+          this.toggleTooltip(true);
+        } else {
+          this.toggleTooltip(false);
+        }
+      }
+    }
+
+    if (nzTooltipOptions) {
+      const current = nzTooltipOptions.currentValue as HandleTooltipOptions | undefined;
+      if (current?.tooltipVisible === 'always') {
+        Promise.resolve().then(() => this.toggleTooltip(true, true));
+      }
     }
   }
 

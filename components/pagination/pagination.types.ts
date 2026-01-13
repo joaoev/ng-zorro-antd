@@ -11,3 +11,34 @@ export interface PaginationItemRenderContext {
 export type PaginationItemType = 'page' | 'prev' | 'next' | 'prev_5' | 'next_5';
 
 export type NzPaginationAlign = 'start' | 'center' | 'end';
+
+export interface PaginationState {
+  total?: number;
+  pageIndex?: number;
+  pageSize?: number;
+}
+
+export interface PaginationDisplayOptions {
+  size?: 'default' | 'small';
+  showSizeChanger?: boolean;
+  showQuickJumper?: boolean;
+  simple?: boolean;
+  disabled?: boolean;
+  responsive?: boolean;
+  hideOnSinglePage?: boolean;
+  pageSizeOptions?: number[];
+}
+
+export interface PaginationOptionsState {
+  total?: number;
+  pageIndex?: number;
+  pageSize?: number;
+  pageSizeOptions?: number[];
+}
+
+export interface PaginationOptionsDisplay {
+  size?: 'default' | 'small';
+  disabled?: boolean;
+  showSizeChanger?: boolean;
+  showQuickJumper?: boolean;
+}

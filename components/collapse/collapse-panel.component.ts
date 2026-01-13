@@ -9,25 +9,18 @@ import {
   ChangeDetectorRef,
   Component,
   DestroyRef,
-  ElementRef,
   EventEmitter,
   inject,
   Input,
-  NgZone,
   OnInit,
   Output,
   TemplateRef,
-  ViewChild,
-  ViewEncapsulation,
-  type AfterViewInit
+  ViewEncapsulation
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter } from 'rxjs/operators';
 
 import { collapseMotion, NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
 import { NzConfigKey, onConfigChangeEventForComponent, WithConfig } from 'ng-zorro-antd/core/config';
 import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
-import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 
 import { NzCollapseComponent } from './collapse.component';
@@ -42,15 +35,15 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'collapsePanel';
   animations: [collapseMotion],
   template: `
     <div
-      #collapseHeader
       role="button"
       [attr.aria-expanded]="nzActive"
       class="ant-collapse-header"
       [class.ant-collapse-icon-collapsible-only]="nzCollapsible === 'icon'"
       [class.ant-collapse-header-collapsible-only]="nzCollapsible === 'header'"
+      (click)="onHeaderClick($event)"
     >
       @if (nzShowArrow) {
-        <div role="button" #collapseIcon class="ant-collapse-expand-icon">
+        <div role="button" class="ant-collapse-expand-icon" (click)="onIconClick($event)">
           <ng-container *nzStringTemplateOutlet="nzExpandedIcon; let expandedIcon">
             <nz-icon [nzType]="expandedIcon || 'right'" class="ant-collapse-arrow" [nzRotate]="nzActive ? 90 : 0" />
           </ng-container>
@@ -84,8 +77,7 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'collapsePanel';
   },
   imports: [NzOutletModule, NzIconModule]
 })
-export class NzCollapsePanelComponent implements OnInit, AfterViewInit {
-  private ngZone = inject(NgZone);
+export class NzCollapsePanelComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
   private nzCollapseComponent = inject(NzCollapseComponent, { host: true });
@@ -105,9 +97,6 @@ export class NzCollapsePanelComponent implements OnInit, AfterViewInit {
   @Input() nzCollapsible?: 'disabled' | 'header' | 'icon';
   @Output() readonly nzActiveChange = new EventEmitter<boolean>();
 
-  @ViewChild('collapseHeader') collapseHeader!: ElementRef<HTMLElement>;
-  @ViewChild('collapseIcon') collapseIcon?: ElementRef<HTMLElement>;
-
   markForCheck(): void {
     this.cdr.markForCheck();
   }
@@ -124,21 +113,23 @@ export class NzCollapsePanelComponent implements OnInit, AfterViewInit {
     this.nzCollapseComponent.addPanel(this);
   }
 
-  ngAfterViewInit(): void {
-    let fromEvent$ = fromEventOutsideAngular(this.collapseHeader.nativeElement, 'click');
-    if (this.nzShowArrow && this.nzCollapsible === 'icon' && this.collapseIcon) {
-      fromEvent$ = fromEventOutsideAngular(this.collapseIcon!.nativeElement, 'click');
+  onHeaderClick(_event: MouseEvent): void {
+    if (this.nzCollapsible === 'icon') {
+      return;
     }
-    fromEvent$
-      .pipe(
-        filter(() => !this.nzDisabled && this.nzCollapsible !== 'disabled'),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(() => {
-        this.ngZone.run(() => {
-          this.nzCollapseComponent.click(this);
-          this.cdr.markForCheck();
-        });
-      });
+    this.handleClick();
+  }
+
+  onIconClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.handleClick();
+  }
+
+  private handleClick(): void {
+    if (this.nzDisabled || this.nzCollapsible === 'disabled') {
+      return;
+    }
+    this.nzCollapseComponent.click(this);
+    this.cdr.markForCheck();
   }
 }

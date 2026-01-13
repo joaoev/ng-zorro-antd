@@ -20,7 +20,6 @@ import {
   effect,
   forwardRef,
   inject,
-  NgZone,
   ChangeDetectorRef,
   DestroyRef
 } from '@angular/core';
@@ -29,7 +28,6 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
 
 import { NzFormStatusService } from 'ng-zorro-antd/core/form';
 import { NzSafeAny, OnChangeType, OnTouchedType } from 'ng-zorro-antd/core/types';
-import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 
 import { NZ_CHECKBOX_GROUP } from './tokens';
 
@@ -56,6 +54,7 @@ import { NZ_CHECKBOX_GROUP } from './tokens';
         [ngModel]="nzChecked"
         [disabled]="nzDisabled || (checkboxGroupComponent?.finalDisabled() ?? false)"
         (ngModelChange)="innerCheckedChange($event)"
+        (click)="$event.stopPropagation()"
       />
       <span class="ant-checkbox-inner"></span>
     </span>
@@ -74,12 +73,12 @@ import { NZ_CHECKBOX_GROUP } from './tokens';
     '[class.ant-checkbox-wrapper-in-form-item]': '!!nzFormStatusService',
     '[class.ant-checkbox-wrapper-checked]': 'nzChecked',
     '[class.ant-checkbox-wrapper-disabled]': 'nzDisabled || checkboxGroupComponent?.finalDisabled()',
-    '[class.ant-checkbox-rtl]': `dir === 'rtl'`
+    '[class.ant-checkbox-rtl]': `dir === 'rtl'`,
+    '(click)': 'onHostClick($event)'
   },
   imports: [FormsModule]
 })
 export class NzCheckboxComponent implements OnInit, ControlValueAccessor, AfterViewInit {
-  private ngZone = inject(NgZone);
   private elementRef = inject(ElementRef<HTMLElement>);
   private cdr = inject(ChangeDetectorRef);
   private focusMonitor = inject(FocusMonitor);
@@ -134,7 +133,7 @@ export class NzCheckboxComponent implements OnInit, ControlValueAccessor, AfterV
   }
 
   blur(): void {
-    this.inputElement.nativeElement.blur();
+    (this.inputElement as { ['nativeElement']: HTMLInputElement })['nativeElement'].blur();
   }
 
   constructor() {
@@ -166,24 +165,16 @@ export class NzCheckboxComponent implements OnInit, ControlValueAccessor, AfterV
     });
 
     this.dir = this.directionality.value;
+  }
 
-    fromEventOutsideAngular(this.elementRef.nativeElement, 'click')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(event => {
-        event.preventDefault();
-        this.focus();
-        if (this.nzDisabled) {
-          return;
-        }
-        this.ngZone.run(() => {
-          this.innerCheckedChange(!this.nzChecked);
-          this.cdr.markForCheck();
-        });
-      });
-
-    fromEventOutsideAngular(this.inputElement.nativeElement, 'click')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(event => event.stopPropagation());
+  onHostClick(event: MouseEvent): void {
+    event.preventDefault();
+    this.focus();
+    if (this.nzDisabled || this.checkboxGroupComponent?.finalDisabled()) {
+      return;
+    }
+    this.innerCheckedChange(!this.nzChecked);
+    this.cdr.markForCheck();
   }
 
   ngAfterViewInit(): void {

@@ -17,12 +17,12 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
     </nz-input-wrapper>
     <br />
     <br />
-    <nz-input-wrapper nzPrefix="¥" nzSuffix="RMB">
+    <nz-input-wrapper nzPrefix="¥" nzSuffixWrapper="RMB">
       <input nz-input />
     </nz-input-wrapper>
     <br />
     <br />
-    <nz-input-wrapper nzPrefix="¥" nzSuffix="RMB">
+    <nz-input-wrapper nzPrefix="¥" nzSuffixWrapper="RMB">
       <input nz-input disabled />
     </nz-input-wrapper>
     <br />

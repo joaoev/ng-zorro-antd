@@ -8,7 +8,6 @@ import { Platform } from '@angular/cdk/platform';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   AfterViewInit,
-  booleanAttribute,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -19,7 +18,6 @@ import {
   EventEmitter,
   inject,
   Input,
-  numberAttribute,
   OnChanges,
   OnInit,
   Output,
@@ -33,7 +31,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
-import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/config';
+import { NzConfigKey, NzConfigService } from 'ng-zorro-antd/core/config';
 import { cancelAnimationFrame, requestAnimationFrame } from 'ng-zorro-antd/core/polyfill';
 import { NzResizeService } from 'ng-zorro-antd/core/services';
 import { NzTSType } from 'ng-zorro-antd/core/types';
@@ -42,6 +40,12 @@ import { NzI18nService, NzTextI18nInterface } from 'ng-zorro-antd/i18n';
 
 import { NzTextCopyComponent } from './text-copy.component';
 import { NzTextEditComponent } from './text-edit.component';
+import {
+  TypographyBehaviorOptions,
+  TypographyCopyOptions,
+  TypographyEditOptions,
+  TypographyEllipsisOptions
+} from './typography.types';
 
 const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'typography';
 const EXPAND_ELEMENT_CLASSNAME = 'ant-typography-expand';
@@ -134,7 +138,7 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
   nzConfigService = inject(NzConfigService);
-  private el: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
+  private el: HTMLElement = (inject(ElementRef<HTMLElement>) as { ['nativeElement']: HTMLElement })['nativeElement'];
   private cdr = inject(ChangeDetectorRef);
   private viewContainerRef = inject(ViewContainerRef);
   private renderer = inject(Renderer2);
@@ -145,20 +149,93 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
   private document: Document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
 
-  @Input({ transform: booleanAttribute }) nzCopyable = false;
-  @Input({ transform: booleanAttribute }) nzEditable = false;
-  @Input({ transform: booleanAttribute }) nzDisabled = false;
-  @Input({ transform: booleanAttribute }) nzExpandable = false;
-  @Input({ transform: booleanAttribute }) nzEllipsis = false;
-  @Input() @WithConfig() nzCopyTooltips?: [NzTSType, NzTSType] | null = undefined;
-  @Input() @WithConfig() nzCopyIcons: [NzTSType, NzTSType] = ['copy', 'check'];
-  @Input() @WithConfig() nzEditTooltip?: null | NzTSType = undefined;
-  @Input() @WithConfig() nzEditIcon: NzTSType = 'edit';
+  @Input() nzBehaviorOptions: TypographyBehaviorOptions = {};
+  @Input() nzCopyOptions: TypographyCopyOptions = {};
+  @Input() nzEditOptions: TypographyEditOptions = {};
+  @Input() nzEllipsisOptions: TypographyEllipsisOptions = {};
   @Input() nzContent?: string;
-  @Input({ transform: numberAttribute }) @WithConfig() nzEllipsisRows: number = 1;
   @Input() nzType: 'secondary' | 'warning' | 'danger' | 'success' | undefined;
-  @Input() nzCopyText: string | undefined;
-  @Input() nzSuffix: string | undefined;
+
+  // Getters para manter compatibilidade com código existente
+  get nzCopyable(): boolean {
+    return this.nzBehaviorOptions.copyable ?? false;
+  }
+
+  get nzEditable(): boolean {
+    return this.nzBehaviorOptions.editable ?? false;
+  }
+
+  get nzDisabled(): boolean {
+    return this.nzBehaviorOptions.disabled ?? false;
+  }
+
+  get nzExpandable(): boolean {
+    return this.nzBehaviorOptions.expandable ?? false;
+  }
+
+  get nzEllipsis(): boolean {
+    return this.nzBehaviorOptions.ellipsis ?? false;
+  }
+
+  get nzCopyTooltips(): [NzTSType, NzTSType] | null | undefined {
+    if (this.nzCopyOptions.copyTooltips !== undefined) {
+      return this.nzCopyOptions.copyTooltips;
+    }
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    return config && 'nzCopyTooltips' in config
+      ? (config as { nzCopyTooltips?: [NzTSType, NzTSType] | null }).nzCopyTooltips
+      : undefined;
+  }
+
+  get nzCopyIcons(): [NzTSType, NzTSType] {
+    if (this.nzCopyOptions.copyIcons !== undefined) {
+      return this.nzCopyOptions.copyIcons;
+    }
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && 'nzCopyIcons' in config && Array.isArray((config as Record<string, unknown>).nzCopyIcons)) {
+      return (config as { nzCopyIcons: [NzTSType, NzTSType] }).nzCopyIcons;
+    }
+    return ['copy', 'check'];
+  }
+
+  get nzEditTooltip(): null | NzTSType | undefined {
+    if (this.nzEditOptions.editTooltip !== undefined) {
+      return this.nzEditOptions.editTooltip;
+    }
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && typeof (config as { nzEditTooltip?: NzTSType | null }).nzEditTooltip !== 'undefined') {
+      return (config as { nzEditTooltip?: NzTSType | null }).nzEditTooltip;
+    }
+    return undefined;
+  }
+
+  get nzEditIcon(): NzTSType {
+    if (this.nzEditOptions.editIcon !== undefined) {
+      return this.nzEditOptions.editIcon;
+    }
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    return (config && 'nzEditIcon' in config ? (config as { nzEditIcon?: NzTSType }).nzEditIcon : undefined) ?? 'edit';
+  }
+
+  get nzEllipsisRows(): number {
+    if (this.nzEllipsisOptions.ellipsisRows !== undefined) {
+      return this.nzEllipsisOptions.ellipsisRows;
+    }
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    if (config && typeof (config as { nzEllipsisRows?: number }).nzEllipsisRows === 'number') {
+      return (config as { nzEllipsisRows: number }).nzEllipsisRows;
+    }
+    return 1;
+  }
+
+  get nzCopyText(): string | undefined {
+    return this.nzCopyOptions.copyText;
+  }
+
+  get nzSuffix(): string | undefined {
+    return this.nzEllipsisOptions.suffix;
+  }
+
   @Output() readonly nzContentChange = new EventEmitter<string>();
   @Output() readonly nzCopy = new EventEmitter<string>();
   @Output() readonly nzExpandChange = new EventEmitter<void>();
@@ -272,8 +349,8 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
     }
     const { viewRef, removeView } = this.getOriginContentViewRef();
     const fixedNodes = [this.textCopyRef, this.textEditRef]
-      .filter(e => e && e.nativeElement)
-      .map(e => e!.nativeElement);
+      .filter(e => e && (e as { ['nativeElement']?: HTMLElement })['nativeElement'])
+      .map(e => (e as { ['nativeElement']: HTMLElement })['nativeElement']);
     const expandableBtnElement = this.getExpandableBtnElement();
     if (expandableBtnElement) {
       fixedNodes.push(expandableBtnElement);
@@ -294,7 +371,9 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
       this.isEllipsis = ellipsis;
       this.nzOnEllipsis.emit(ellipsis);
     }
-    const ellipsisContainerNativeElement = this.ellipsisContainer!.nativeElement;
+    const ellipsisContainerNativeElement = (this.ellipsisContainer as { ['nativeElement']: HTMLSpanElement })[
+      'nativeElement'
+    ];
     while (ellipsisContainerNativeElement.firstChild) {
       this.renderer.removeChild(ellipsisContainerNativeElement, ellipsisContainerNativeElement.firstChild);
     }
@@ -354,8 +433,8 @@ export class NzTypographyComponent implements OnInit, AfterViewInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const { nzCopyable, nzEditable, nzExpandable, nzEllipsis, nzContent, nzEllipsisRows, nzSuffix } = changes;
-    if (nzCopyable || nzEditable || nzExpandable || nzEllipsis || nzContent || nzEllipsisRows || nzSuffix) {
+    const { nzBehaviorOptions, nzEllipsisOptions, nzContent } = changes;
+    if (nzBehaviorOptions || nzEllipsisOptions || nzContent) {
       if (this.nzEllipsis) {
         if (this.expanded) {
           this.windowResizeSubscription.unsubscribe();

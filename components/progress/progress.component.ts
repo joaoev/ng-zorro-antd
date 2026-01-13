@@ -14,16 +14,20 @@ import {
   OnInit,
   SimpleChanges,
   ViewEncapsulation,
-  numberAttribute,
   inject,
   DestroyRef
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { NzConfigKey, onConfigChangeEventForComponent, WithConfig } from 'ng-zorro-antd/core/config';
+import {
+  NzConfigKey,
+  NzConfigService,
+  onConfigChangeEventForComponent,
+  ProgressConfig
+} from 'ng-zorro-antd/core/config';
 import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
 import { NgStyleInterface } from 'ng-zorro-antd/core/types';
-import { isNotNil, numberAttributeWithZeroFallback } from 'ng-zorro-antd/core/util';
+import { isNotNil } from 'ng-zorro-antd/core/util';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 
 import {
@@ -36,7 +40,10 @@ import {
   NzProgressStepItem,
   NzProgressStrokeColorType,
   NzProgressStrokeLinecapType,
-  NzProgressTypeType
+  NzProgressTypeType,
+  ProgressState,
+  ProgressDisplayOptions,
+  ProgressStrokeOptions
 } from './typings';
 import { handleCircleGradient, handleLinearGradient } from './utils';
 
@@ -175,22 +182,78 @@ export class NzProgressComponent implements OnChanges, OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly directionality = inject(Directionality);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly nzConfigService = inject(NzConfigService);
 
-  @Input() @WithConfig() nzShowInfo: boolean = true;
-  @Input() nzWidth = 132;
-  @Input() @WithConfig() nzStrokeColor?: NzProgressStrokeColorType = undefined;
-  @Input() @WithConfig() nzSize: 'default' | 'small' = 'default';
-  @Input() nzFormat?: NzProgressFormatter;
-  @Input({ transform: numberAttributeWithZeroFallback }) nzSuccessPercent?: number;
-  @Input({ transform: numberAttribute }) nzPercent: number = 0;
-  @Input({ transform: numberAttributeWithZeroFallback }) @WithConfig() nzStrokeWidth?: number;
-  @Input({ transform: numberAttributeWithZeroFallback }) @WithConfig() nzGapDegree?: number;
-  @Input() nzStatus?: NzProgressStatusType;
-  @Input() nzType: NzProgressTypeType = 'line';
-  @Input() @WithConfig() nzGapPosition: NzProgressGapPositionType = 'top';
-  @Input() @WithConfig() nzStrokeLinecap: NzProgressStrokeLinecapType = 'round';
+  // Agrupamento de inputs para reduzir o número de propriedades @Input
+  @Input() nzState: ProgressState = {};
+  @Input() nzOptions: ProgressDisplayOptions = {};
+  @Input() nzStroke: ProgressStrokeOptions = {};
 
-  @Input({ transform: numberAttribute }) nzSteps: number = 0;
+  // Getters para acessar valores individuais com fallback para valores padrão e configuração global
+  private get config(): ProgressConfig {
+    const config = this.nzConfigService.getConfigForComponent(this._nzModuleName);
+    // Faz o type guard para garantir que é ProgressConfig
+    if (config && (config as ProgressConfig).nzSize !== undefined) {
+      return config as ProgressConfig;
+    }
+    return {};
+  }
+
+  get nzPercent(): number {
+    return this.nzState.percent ?? 0;
+  }
+
+  get nzSuccessPercent(): number | undefined {
+    return this.nzState.successPercent;
+  }
+
+  get nzStatus(): NzProgressStatusType | undefined {
+    return this.nzState.status;
+  }
+
+  get nzShowInfo(): boolean {
+    return this.nzOptions.showInfo ?? this.config.nzShowInfo ?? true;
+  }
+
+  get nzWidth(): number {
+    return this.nzOptions.width ?? 132;
+  }
+
+  get nzSize(): 'default' | 'small' {
+    return this.nzOptions.size ?? this.config.nzSize ?? 'default';
+  }
+
+  get nzFormat(): NzProgressFormatter | undefined {
+    return this.nzOptions.format;
+  }
+
+  get nzType(): NzProgressTypeType {
+    return this.nzOptions.type ?? 'line';
+  }
+
+  get nzSteps(): number {
+    return this.nzOptions.steps ?? 0;
+  }
+
+  get nzStrokeColor(): NzProgressStrokeColorType | undefined {
+    return this.nzStroke.strokeColor ?? this.config.nzStrokeColor;
+  }
+
+  get nzStrokeWidth(): number | undefined {
+    return this.nzStroke.strokeWidth ?? this.config.nzStrokeWidth;
+  }
+
+  get nzStrokeLinecap(): NzProgressStrokeLinecapType {
+    return this.nzStroke.strokeLinecap ?? this.config.nzStrokeLinecap ?? 'round';
+  }
+
+  get nzGapDegree(): number | undefined {
+    return this.nzStroke.gapDegree ?? this.config.nzGapDegree;
+  }
+
+  get nzGapPosition(): NzProgressGapPositionType {
+    return this.nzStroke.gapPosition ?? this.config.nzGapPosition ?? 'top';
+  }
 
   steps: NzProgressStepItem[] = [];
 
@@ -246,50 +309,66 @@ export class NzProgressComponent implements OnChanges, OnInit {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const {
-      nzSteps,
-      nzGapPosition,
-      nzStrokeLinecap,
-      nzStrokeColor,
-      nzGapDegree,
-      nzType,
-      nzStatus,
-      nzPercent,
-      nzSuccessPercent,
-      nzStrokeWidth
-    } = changes;
+    const { nzState, nzOptions, nzStroke } = changes;
 
-    if (nzStatus) {
-      this.cachedStatus = this.nzStatus || this.cachedStatus;
-    }
+    if (nzState) {
+      const state = nzState.currentValue as ProgressState;
+      if (state.status !== undefined) {
+        this.cachedStatus = state.status || this.cachedStatus;
+      }
 
-    if (nzPercent || nzSuccessPercent) {
-      const fillAll = parseInt(this.nzPercent.toString(), 10) >= 100;
-      if (fillAll) {
-        if ((isNotNil(this.nzSuccessPercent) && this.nzSuccessPercent! >= 100) || this.nzSuccessPercent === undefined) {
-          this.inferredStatus = 'success';
+      if (state.percent !== undefined || state.successPercent !== undefined) {
+        const fillAll = parseInt(this.nzPercent.toString(), 10) >= 100;
+        if (fillAll) {
+          if (
+            (isNotNil(this.nzSuccessPercent) && this.nzSuccessPercent! >= 100) ||
+            this.nzSuccessPercent === undefined
+          ) {
+            this.inferredStatus = 'success';
+          }
+        } else {
+          this.inferredStatus = this.cachedStatus;
         }
-      } else {
-        this.inferredStatus = this.cachedStatus;
       }
     }
 
-    if (nzStatus || nzPercent || nzSuccessPercent || nzStrokeColor) {
-      this.updateIcon();
+    if (nzState || nzStroke) {
+      const state = this.nzState;
+      const stroke = this.nzStroke;
+      if (
+        state.status !== undefined ||
+        state.percent !== undefined ||
+        state.successPercent !== undefined ||
+        stroke.strokeColor !== undefined
+      ) {
+        this.updateIcon();
+      }
+
+      if (stroke.strokeColor !== undefined || nzStroke) {
+        this.setStrokeColor();
+      }
     }
 
-    if (nzStrokeColor) {
-      this.setStrokeColor();
-    }
+    if (nzState || nzOptions || nzStroke) {
+      const state = this.nzState;
+      const options = this.nzOptions;
+      const stroke = this.nzStroke;
+      if (
+        stroke.gapPosition !== undefined ||
+        stroke.strokeLinecap !== undefined ||
+        stroke.gapDegree !== undefined ||
+        options.type !== undefined ||
+        state.percent !== undefined ||
+        stroke.strokeColor !== undefined
+      ) {
+        this.getCirclePaths();
+      }
 
-    if (nzGapPosition || nzStrokeLinecap || nzGapDegree || nzType || nzPercent || nzStrokeColor || nzStrokeColor) {
-      this.getCirclePaths();
-    }
-
-    if (nzPercent || nzSteps || nzStrokeWidth) {
-      this.isSteps = this.nzSteps > 0;
-      if (this.isSteps) {
-        this.getSteps();
+      if (state.percent !== undefined || options.steps !== undefined || stroke.strokeWidth !== undefined) {
+        this.isSteps = this.nzSteps > 0;
+        if (this.isSteps) {
+          this.getSteps();
+        }
       }
     }
   }

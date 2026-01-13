@@ -28,6 +28,7 @@ import { NzBreakpointKey, NzBreakpointService, siderResponsiveMap } from 'ng-zor
 import { inNextTick, toCssPixel } from 'ng-zorro-antd/core/util';
 import { NzMenuDirective } from 'ng-zorro-antd/menu';
 
+import { SiderCollapseOptions, SiderDimensionsOptions, SiderTriggerOptions } from './sider.types';
 import { NzSiderTriggerComponent } from './sider-trigger.component';
 
 @Component({
@@ -76,18 +77,43 @@ export class NzSiderComponent implements OnInit, OnChanges, AfterContentInit {
 
   @ContentChild(NzMenuDirective) nzMenuDirective: NzMenuDirective | null = null;
   @Output() readonly nzCollapsedChange = new EventEmitter();
-  @Input() nzWidth: string | number = 200;
+  @Input() nzDimensions: SiderDimensionsOptions = {};
+  @Input() nzCollapseOptions: SiderCollapseOptions = {};
+  @Input() nzTriggerOptions: SiderTriggerOptions = {};
   @Input() nzTheme: 'light' | 'dark' = 'dark';
-  @Input() nzCollapsedWidth = 80;
-  @Input() nzBreakpoint: NzBreakpointKey | null = null;
-  @Input() nzZeroTrigger: TemplateRef<void> | null = null;
-  @Input() nzTrigger: TemplateRef<void> | undefined | null = undefined;
-  @Input({ transform: booleanAttribute }) nzReverseArrow = false;
-  @Input({ transform: booleanAttribute }) nzCollapsible = false;
   @Input({ transform: booleanAttribute }) nzCollapsed = false;
   matchBreakPoint = false;
   flexSetting: string | null = null;
   widthSetting: string | null = null;
+
+  // Getters para manter compatibilidade com código existente
+  get nzWidth(): string | number {
+    return this.nzDimensions.width ?? 200;
+  }
+
+  get nzCollapsedWidth(): number {
+    return this.nzDimensions.collapsedWidth ?? 80;
+  }
+
+  get nzCollapsible(): boolean {
+    return this.nzCollapseOptions.collapsible ?? false;
+  }
+
+  get nzReverseArrow(): boolean {
+    return this.nzCollapseOptions.reverseArrow ?? false;
+  }
+
+  get nzBreakpoint(): NzBreakpointKey | null {
+    return this.nzCollapseOptions.breakpoint ?? null;
+  }
+
+  get nzTrigger(): TemplateRef<void> | undefined | null {
+    return this.nzTriggerOptions.trigger ?? undefined;
+  }
+
+  get nzZeroTrigger(): TemplateRef<void> | null {
+    return this.nzTriggerOptions.zeroTrigger ?? null;
+  }
 
   updateStyleMap(): void {
     this.widthSetting = this.nzCollapsed ? `${this.nzCollapsedWidth}px` : toCssPixel(this.nzWidth);
@@ -132,8 +158,8 @@ export class NzSiderComponent implements OnInit, OnChanges, AfterContentInit {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const { nzCollapsed, nzCollapsedWidth, nzWidth } = changes;
-    if (nzCollapsed || nzCollapsedWidth || nzWidth) {
+    const { nzCollapsed, nzDimensions, nzCollapseOptions } = changes;
+    if (nzCollapsed || nzDimensions) {
       this.updateStyleMap();
     }
     if (nzCollapsed) {

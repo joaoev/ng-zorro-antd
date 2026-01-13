@@ -42,118 +42,7 @@ import { NZ_INPUT_WRAPPER } from './tokens';
   selector: 'nz-input-wrapper,nz-input-password,nz-input-search',
   exportAs: 'nzInputWrapper',
   imports: [NzIconModule, NzButtonModule, NzFormItemFeedbackIconComponent, NgTemplateOutlet],
-  template: `
-    @if (hasAddon()) {
-      <ng-template [ngTemplateOutlet]="inputWithAddonInner" />
-    } @else if (hasAffix()) {
-      <ng-template [ngTemplateOutlet]="inputWithAffixInner" />
-    } @else {
-      <ng-template [ngTemplateOutlet]="input" />
-    }
-
-    <ng-template #inputWithAddonInner>
-      <span class="ant-input-wrapper ant-input-group">
-        @if (hasAddonBefore()) {
-          <span class="ant-input-group-addon">
-            <ng-content select="[nzInputAddonBefore]">{{ nzAddonBefore() }}</ng-content>
-          </span>
-        }
-
-        @if (hasAffix()) {
-          <ng-template [ngTemplateOutlet]="inputWithAffix" />
-        } @else {
-          <ng-template [ngTemplateOutlet]="input" />
-        }
-
-        @if (hasAddonAfter()) {
-          <span class="ant-input-group-addon">
-            @if (inputSearchDir) {
-              @let nzEnterButton = inputSearchDir.nzEnterButton();
-              @let hasEnterButton = inputSearchEnterButton() ?? nzEnterButton !== false;
-              <button
-                nz-button
-                [nzType]="hasEnterButton ? 'primary' : 'default'"
-                [nzSize]="size()"
-                [nzLoading]="inputSearchDir.nzLoading()"
-                type="button"
-                class="ant-input-search-button"
-                (click)="inputSearchDir.search($event)"
-              >
-                <ng-content select="[nzInputSearchEnterButton]">
-                  @if (nzEnterButton && typeof nzEnterButton === 'string') {
-                    {{ nzEnterButton }}
-                  } @else {
-                    <nz-icon nzType="search" nzTheme="outline" />
-                  }
-                </ng-content>
-              </button>
-            }
-            <ng-content select="[nzInputAddonAfter]">{{ nzAddonAfter() }}</ng-content>
-          </span>
-        }
-      </span>
-    </ng-template>
-
-    <ng-template #inputWithAffix>
-      <span [class]="affixWrapperClass()">
-        <ng-template [ngTemplateOutlet]="inputWithAffixInner" />
-      </span>
-    </ng-template>
-
-    <ng-template #inputWithAffixInner>
-      @if (hasPrefix()) {
-        <span class="ant-input-prefix">
-          <ng-content select="[nzInputPrefix]">{{ nzPrefix() }}</ng-content>
-        </span>
-      }
-      <ng-template [ngTemplateOutlet]="input" />
-      @if (hasSuffix()) {
-        <span class="ant-input-suffix">
-          @if (nzAllowClear()) {
-            <span
-              class="ant-input-clear-icon"
-              [class.ant-input-clear-icon-has-suffix]="
-                nzSuffix() || suffix() || hasFeedback() || inputPasswordDir?.nzVisibilityToggle()
-              "
-              [class.ant-input-clear-icon-hidden]="!inputDir().value() || disabled() || readOnly()"
-              role="button"
-              tabindex="-1"
-              (click)="clear(); inputSearchDir?.search($event, 'clear')"
-            >
-              <ng-content select="[nzInputClearIcon]">
-                <nz-icon nzType="close-circle" nzTheme="fill" />
-              </ng-content>
-            </span>
-          }
-          @if (inputPasswordDir && inputPasswordDir.nzVisibilityToggle()) {
-            <span
-              class="ant-input-password-icon"
-              role="button"
-              tabindex="-1"
-              (click)="inputPasswordDir.toggleVisible()"
-            >
-              @if (inputPasswordIconTmpl(); as tmpl) {
-                <ng-template
-                  [ngTemplateOutlet]="tmpl"
-                  [ngTemplateOutletContext]="{ $implicit: inputPasswordDir.nzVisible() }"
-                />
-              } @else {
-                <nz-icon [nzType]="inputPasswordDir.nzVisible() ? 'eye' : 'eye-invisible'" nzTheme="outline" />
-              }
-            </span>
-          }
-          <ng-content select="[nzInputSuffix]">{{ nzSuffix() }}</ng-content>
-          @if (hasFeedback() && status()) {
-            <nz-form-item-feedback-icon [status]="status()" />
-          }
-        </span>
-      }
-    </ng-template>
-
-    <ng-template #input>
-      <ng-content select="[nz-input]" />
-    </ng-template>
-  `,
+  templateUrl: './input-wrapper.component.html',
   providers: [
     { provide: NZ_SPACE_COMPACT_ITEM_TYPE, useValue: 'input' },
     { provide: NZ_INPUT_WRAPPER, useExisting: forwardRef(() => NzInputWrapperComponent) }
@@ -185,7 +74,7 @@ export class NzInputWrapperComponent {
 
   readonly nzAllowClear = input(false, { transform: booleanAttribute });
   readonly nzPrefix = input<string>();
-  readonly nzSuffix = input<string>();
+  readonly nzSuffixWrapper = input<string>();
   readonly nzAddonBefore = input<string>();
   readonly nzAddonAfter = input<string>();
 
@@ -200,7 +89,8 @@ export class NzInputWrapperComponent {
 
   protected readonly hasPrefix = computed(() => !!this.nzPrefix() || !!this.prefix());
   protected readonly hasSuffix = computed(
-    () => !!this.nzSuffix() || !!this.suffix() || this.nzAllowClear() || this.hasFeedback() || this.inputPasswordDir
+    () =>
+      !!this.nzSuffixWrapper() || !!this.suffix() || this.nzAllowClear() || this.hasFeedback() || this.inputPasswordDir
   );
   protected readonly hasAffix = computed(() => this.hasPrefix() || this.hasSuffix());
   protected readonly hasAddonBefore = computed(() => !!this.nzAddonBefore() || !!this.addonBefore());

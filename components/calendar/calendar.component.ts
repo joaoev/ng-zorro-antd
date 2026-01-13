@@ -35,54 +35,16 @@ import {
   NzMonthFullCellDirective as MonthFullCell
 } from './calendar-cells';
 import { NzCalendarHeaderComponent } from './calendar-header.component';
+import { NzCalendarDateTemplate, getTemplate } from './calendar-template.helper';
 
 export type NzCalendarMode = 'month' | 'year';
-type NzCalendarDateTemplate = TemplateRef<{ $implicit: Date }>;
 
 @Component({
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'nz-calendar',
   exportAs: 'nzCalendar',
-  template: `
-    <nz-calendar-header
-      [fullscreen]="nzFullscreen"
-      [activeDate]="activeDate"
-      [nzCustomHeader]="nzCustomHeader"
-      [(mode)]="nzMode"
-      (modeChange)="onModeChange($event)"
-      (yearChange)="onYearSelect($event)"
-      (monthChange)="onMonthSelect($event)"
-    ></nz-calendar-header>
-
-    <div class="ant-picker-panel">
-      <div class="ant-picker-{{ nzMode === 'month' ? 'date' : 'month' }}-panel">
-        <div class="ant-picker-body">
-          @if (nzMode === 'month') {
-            <!--  TODO(@wenqi73) [cellRender] [fullCellRender] -->
-            <date-table
-              [prefixCls]="prefixCls"
-              [value]="activeDate"
-              [activeDate]="activeDate"
-              [cellRender]="$any(dateCell)"
-              [fullCellRender]="$any(dateFullCell)"
-              [disabledDate]="nzDisabledDate"
-              (valueChange)="onDateSelect($event)"
-            ></date-table>
-          } @else {
-            <month-table
-              [prefixCls]="prefixCls"
-              [value]="activeDate"
-              [activeDate]="activeDate"
-              [cellRender]="$any(monthCell)"
-              [fullCellRender]="$any(monthFullCell)"
-              (valueChange)="onDateSelect($event)"
-            ></month-table>
-          }
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './calendar.component.html',
   host: {
     class: 'ant-picker-calendar',
     '[class.ant-picker-calendar-full]': 'nzFullscreen',
@@ -113,32 +75,28 @@ export class NzCalendarComponent implements ControlValueAccessor, OnChanges, OnI
   @Output() readonly nzSelectChange = new EventEmitter<Date>();
   @Output() readonly nzValueChange = new EventEmitter<Date>();
 
-  /**
-   * Cannot use @Input and @ContentChild on one variable
-   * because { static: false } will make @Input property get delayed
-   **/
   @Input() nzDateCell?: NzCalendarDateTemplate;
   @ContentChild(DateCell, { static: false, read: TemplateRef }) nzDateCellChild?: NzCalendarDateTemplate;
   get dateCell(): NzCalendarDateTemplate {
-    return (this.nzDateCell || this.nzDateCellChild)!;
+    return getTemplate(this.nzDateCell, this.nzDateCellChild);
   }
 
   @Input() nzDateFullCell?: NzCalendarDateTemplate;
   @ContentChild(DateFullCell, { static: false, read: TemplateRef }) nzDateFullCellChild?: NzCalendarDateTemplate;
   get dateFullCell(): NzCalendarDateTemplate {
-    return (this.nzDateFullCell || this.nzDateFullCellChild)!;
+    return getTemplate(this.nzDateFullCell, this.nzDateFullCellChild);
   }
 
   @Input() nzMonthCell?: NzCalendarDateTemplate;
   @ContentChild(MonthCell, { static: false, read: TemplateRef }) nzMonthCellChild?: NzCalendarDateTemplate;
   get monthCell(): NzCalendarDateTemplate {
-    return (this.nzMonthCell || this.nzMonthCellChild)!;
+    return getTemplate(this.nzMonthCell, this.nzMonthCellChild);
   }
 
   @Input() nzMonthFullCell?: NzCalendarDateTemplate;
   @ContentChild(MonthFullCell, { static: false, read: TemplateRef }) nzMonthFullCellChild?: NzCalendarDateTemplate;
   get monthFullCell(): NzCalendarDateTemplate {
-    return (this.nzMonthFullCell || this.nzMonthFullCellChild)!;
+    return getTemplate(this.nzMonthFullCell, this.nzMonthFullCellChild);
   }
 
   @Input() nzCustomHeader?: string | TemplateRef<void>;
@@ -150,6 +108,7 @@ export class NzCalendarComponent implements ControlValueAccessor, OnChanges, OnI
     this.dir = this.directionality.value;
     this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.dir = this.directionality.value;
+      this.cdr.markForCheck();
     });
   }
 
@@ -159,18 +118,14 @@ export class NzCalendarComponent implements ControlValueAccessor, OnChanges, OnI
   }
 
   onYearSelect(year: number): void {
-    const date = this.activeDate.setYear(year);
-    this.updateDate(date);
+    this.updateDate(this.activeDate.setYear(year));
   }
 
   onMonthSelect(month: number): void {
-    const date = this.activeDate.setMonth(month);
-    this.updateDate(date);
+    this.updateDate(this.activeDate.setMonth(month));
   }
 
   onDateSelect(date: CandyDate): void {
-    // Only activeDate is enough in calendar
-    // this.value = date;
     this.updateDate(date);
   }
 

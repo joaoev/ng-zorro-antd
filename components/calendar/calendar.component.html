@@ -1,0 +1,12 @@
+<nz-calendar-header [fullscreen]="nzFullscreen" [activeDate]="activeDate" [nzCustomHeader]="nzCustomHeader" [(mode)]="nzMode" (modeChange)="onModeChange($event)" (yearChange)="onYearSelect($event)" (monthChange)="onMonthSelect($event)"></nz-calendar-header>
+<div class="ant-picker-panel">
+  <div class="ant-picker-{{ nzMode === 'month' ? 'date' : 'month' }}-panel">
+    <div class="ant-picker-body">
+      @if (nzMode === 'month') {
+        <date-table [prefixCls]="prefixCls" [value]="activeDate" [activeDate]="activeDate" [cellRender]="$any(dateCell)" [fullCellRender]="$any(dateFullCell)" [disabledDate]="nzDisabledDate" (valueChange)="onDateSelect($event)"></date-table>
+      } @else {
+        <month-table [prefixCls]="prefixCls" [value]="activeDate" [activeDate]="activeDate" [cellRender]="$any(monthCell)" [fullCellRender]="$any(monthFullCell)" (valueChange)="onDateSelect($event)"></month-table>
+      }
+    </div>
+  </div>
+</div>

@@ -25,88 +25,7 @@ import { NzNotificationData } from './typings';
   selector: 'nz-notification',
   exportAs: 'nzNotification',
   imports: [NzIconModule, NzOutletModule, NgTemplateOutlet],
-  template: `
-    <div
-      #animationElement
-      class="ant-notification-notice ant-notification-notice-closable"
-      [style]="instance.options?.nzStyle || null"
-      [class]="instance.options?.nzClass || ''"
-      (click)="onClick($event)"
-      (mouseenter)="onEnter()"
-      (mouseleave)="onLeave()"
-    >
-      @if (instance.template) {
-        <ng-template
-          [ngTemplateOutlet]="instance.template!"
-          [ngTemplateOutletContext]="{ $implicit: this, data: instance.options?.nzData }"
-        />
-      } @else {
-        <div class="ant-notification-notice-content">
-          <div class="ant-notification-notice-content">
-            <div [class.ant-notification-notice-with-icon]="instance.type !== 'blank'">
-              @switch (instance.type) {
-                @case ('success') {
-                  <nz-icon
-                    nzType="check-circle"
-                    class="ant-notification-notice-icon ant-notification-notice-icon-success"
-                  />
-                }
-                @case ('info') {
-                  <nz-icon
-                    nzType="info-circle"
-                    class="ant-notification-notice-icon ant-notification-notice-icon-info"
-                  />
-                }
-                @case ('warning') {
-                  <nz-icon
-                    nzType="exclamation-circle"
-                    class="ant-notification-notice-icon ant-notification-notice-icon-warning"
-                  />
-                }
-                @case ('error') {
-                  <nz-icon
-                    nzType="close-circle"
-                    class="ant-notification-notice-icon ant-notification-notice-icon-error"
-                  />
-                }
-              }
-              <div class="ant-notification-notice-message">
-                <ng-container *nzStringTemplateOutlet="instance.title">
-                  <div [innerHTML]="instance.title"></div>
-                </ng-container>
-              </div>
-              <div class="ant-notification-notice-description">
-                <ng-container
-                  *nzStringTemplateOutlet="
-                    instance.content;
-                    context: { $implicit: this, data: instance.options?.nzData }
-                  "
-                >
-                  <div [innerHTML]="instance.content"></div>
-                </ng-container>
-              </div>
-              @if (instance.options?.nzButton; as btn) {
-                <span class="ant-notification-notice-btn">
-                  <ng-template [ngTemplateOutlet]="btn" [ngTemplateOutletContext]="{ $implicit: this }" />
-                </span>
-              }
-            </div>
-          </div>
-        </div>
-      }
-      <a tabindex="0" class="ant-notification-notice-close" (click)="close()">
-        <span class="ant-notification-notice-close-x">
-          @if (instance.options?.nzCloseIcon) {
-            <ng-container *nzStringTemplateOutlet="instance.options?.nzCloseIcon; let closeIcon">
-              <nz-icon [nzType]="closeIcon" />
-            </ng-container>
-          } @else {
-            <nz-icon nzType="close" class="ant-notification-close-icon" />
-          }
-        </span>
-      </a>
-    </div>
-  `,
+  templateUrl: './notification.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None
 })
@@ -138,11 +57,6 @@ export class NzNotificationComponent extends NzMNComponent {
     });
   }
 
-  onClick(event: MouseEvent): void {
-    this.instance.onClick.next(event);
-  }
-
-  close(): void {
-    this.destroy(true);
-  }
+  onClick = (event: MouseEvent): void => { this.instance.onClick.next(event); };
+  close = (): void => { this.destroy(true); };
 }
