@@ -479,7 +479,7 @@ describe('NzAffixComponent', () => {
   });
 
   it('should update RTL class when direction changes', () => {
-    const fixedEl = component['fixedEl'].nativeElement;
+    const fixedEl = component['fixedEl'].getParams().node;
     fixedEl.classList.add('ant-affix');
     (component as NzSafeAny)['updateRtlClass']();
 
@@ -500,7 +500,7 @@ describe('NzAffixComponent', () => {
     fixedEl.classList.add('ant-affix-rtl');
     (component as NzSafeAny)['updateRtlClass']();
 
-    expect(component['fixedEl'].nativeElement.classList.contains('ant-affix-rtl')).toBeFalse();
+    expect(component['fixedEl'].getParams().node.classList.contains('ant-affix-rtl')).toBeFalse();
   });
 
   it('should not perform position updates if platform is not browser', () => {
@@ -541,7 +541,7 @@ describe('NzAffixComponent', () => {
     spyOn(component as NzSafeAny, 'getOffset').and.returnValue(elemOffset);
     component['nzOffsetTop'] = 150;
     component['nzOffsetBottom'] = 50;
-    spyOnProperty(component['placeholderNode'], 'offsetWidth').and.returnValue(120);
+    spyOnProperty(component['placeholderRef'].getParams(), 'width').and.returnValue(120);
 
     (component as NzSafeAny)['affixStyle'] = {
       position: 'fixed',
